@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CashPop Facebook Login Demo</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>CashPop Facebook Login Demo</h1>
+        
+        <div id="login-section">
+            <p>Please login with your Facebook account to continue.</p>
+            <button id="fb-login-btn">Login with Facebook</button>
+        </div>
+        
+        <div id="user-section" class="hidden">
+            <h2>Welcome, <span id="user-name">User</span>!</h2>
+            <p>You have successfully logged in with Facebook.</p>
+            <div class="user-info">
+                <p><strong>Email:</strong> <span id="user-email"></span></p>
+                <p><strong>Facebook ID:</strong> <span id="user-id"></span></p>
+            </div>
+            <div class="token-info">
+                <h3>Authentication Tokens</h3>
+                <p><strong>Access Token:</strong> <span id="access-token" class="token"></span></p>
+                <p><strong>Refresh Token:</strong> <span id="refresh-token" class="token"></span></p>
+            </div>
+            <button id="logout-btn">Logout</button>
+        </div>
+        
+        <div id="loading-section" class="hidden">
+            <div class="loader"></div>
+            <p>Processing your login...</p>
+        </div>
+        
+        <div id="error-section" class="hidden">
+            <h2>Error</h2>
+            <p id="error-message"></p>
+            <button id="try-again-btn">Try Again</button>
+        </div>
+    </div>
+
+    <!-- Load Facebook SDK -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    
+    <!-- Load our app script -->
+    <script src="app.js"></script>
+</body>
+</html>

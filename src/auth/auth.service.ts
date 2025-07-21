@@ -112,38 +112,7 @@ export class AuthService {
     return { message: "Logout successful" };
   }
 
-  async validateFacebookToken(token: string): Promise<any> {
-    // In a real application, you would make an HTTP request to Facebook Graph API
-    // to verify the token and get user information
-    try {
-      // This is a simplified implementation
-      // In production, you should use the Facebook Graph API to verify the token
-      // Example: https://graph.facebook.com/me?fields=email,id&access_token=TOKEN
-
-      // For demonstration purposes, we'll make a simple HTTP request to Facebook
-      // You would typically use HttpService from @nestjs/axios for this
-      const axios = require("axios");
-      const response = await axios.get(
-        `https://graph.facebook.com/me?fields=email,id&access_token=${token}`
-      );
-
-      const { email, id } = response.data;
-
-      if (!email) {
-        throw new UnauthorizedException(
-          "Facebook authentication failed: No email provided"
-        );
-      }
-
-      return {
-        email,
-        facebookId: id,
-      };
-    } catch (error) {
-      // If the token is invalid or expired, Facebook will return an error
-      throw new UnauthorizedException("Invalid Facebook token");
-    }
-  }
+  // The validateFacebookToken method has been removed as it's now handled by the FacebookStrategy
 
   async facebookLogin(email: string, facebookId: string) {
     let user = await this.usersService.findByEmail(email);

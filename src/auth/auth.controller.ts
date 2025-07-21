@@ -19,6 +19,7 @@ import { LocalAuthGuard } from "./guards/local-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RefreshGuard } from "./guards/refresh.guard";
 import { EmailVerificationGuard } from "./guards/email-verification.guard";
+import { FacebookAuthGuard } from "./guards/facebook-auth.guard";
 import { FacebookAuthDto } from "./dto/facebook-auth.dto";
 import { AuthResponseDto } from "./dto/auth-response.dto";
 import { UserProfileDto } from "./dto/user-profile.dto";
@@ -124,6 +125,7 @@ export class AuthController {
     return this.authService.refreshTokens(req.user);
   }
 
+  @UseGuards(FacebookAuthGuard)
   @Post("facebook")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login with Facebook token" })
@@ -137,10 +139,9 @@ export class AuthController {
     status: 409,
     description: "Email already registered with a different method",
   })
-  async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto) {
-    const { email, facebookId } = await this.authService.validateFacebookToken(
-      facebookAuthDto.token
-    );
+  async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto, @Req() req) {
+    // The FacebookAuthGuard will validate the token and add the user info to the request
+    const { email, facebookId } = req.user;
     return this.authService.facebookLogin(email, facebookId);
   }
 
