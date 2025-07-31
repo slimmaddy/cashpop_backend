@@ -136,17 +136,12 @@ export class AuthService {
 
   async validateFacebookToken(token: string): Promise<any> {
     try {
-      console.log('🔍 Validating Facebook token...');
-      
       const axios = require("axios");
       const response = await axios.get(
         `https://graph.facebook.com/me?fields=email,id,name&access_token=${token}`
       );
 
       const { email, id, name } = response.data;
-      
-      console.log('✅ Facebook token validated successfully');
-      console.log('📋 User info:', { id, email, name: name || 'N/A' });
 
       if (!email) {
         throw new UnauthorizedException(
@@ -156,7 +151,7 @@ export class AuthService {
 
       return {
         email,
-        facebookId: id,
+        providerId: id,
         name: name || email.split('@')[0], // Fallback name from email
       };
     } catch (error) {
