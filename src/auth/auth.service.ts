@@ -8,9 +8,11 @@ import {
 import { ConfigService } from "@nestjs/config";
 import { UsersService } from "../users/users.service";
 import { CreateUserDto } from "../users/dto/create-user.dto";
+import { AuthProvider } from "../users/entities/user.entity";
 import { ValkeyService, OtpType } from "../services/valkey.service";
 import { MailerService } from "../services/mailer.service";
 import { TokenService } from "./token.service";
+import { access } from "fs";
 
 @Injectable()
 export class AuthService {
@@ -133,21 +135,18 @@ export class AuthService {
   }
 
   async validateFacebookToken(token: string): Promise<any> {
-    // In a real application, you would make an HTTP request to Facebook Graph API
-    // to verify the token and get user information
     try {
-      // This is a simplified implementation
-      // In production, you should use the Facebook Graph API to verify the token
-      // Example: https://graph.facebook.com/me?fields=email,id&access_token=TOKEN
-
-      // For demonstration purposes, we'll make a simple HTTP request to Facebook
-      // You would typically use HttpService from @nestjs/axios for this
+      console.log('🔍 Validating Facebook token...');
+      
       const axios = require("axios");
       const response = await axios.get(
-        `https://graph.facebook.com/me?fields=email,id&access_token=${token}`
+        `https://graph.facebook.com/me?fields=email,id,name&access_token=${token}`
       );
 
-      const { email, id } = response.data;
+      const { email, id, name } = response.data;
+      
+      console.log('✅ Facebook token validated successfully');
+      console.log('📋 User info:', { id, email, name: name || 'N/A' });
 
       if (!email) {
         throw new UnauthorizedException(
@@ -158,41 +157,71 @@ export class AuthService {
       return {
         email,
         facebookId: id,
+        name: name || email.split('@')[0], // Fallback name from email
       };
     } catch (error) {
-      // If the token is invalid or expired, Facebook will return an error
-      throw new UnauthorizedException("Invalid Facebook token");
+      console.log('❌ Facebook token validation failed');
+      
+      if (error.response?.data?.error) {
+        const fbError = error.response.data.error;
+        console.log('🚨 Facebook API Error:', {
+          message: fbError.message,
+          type: fbError.type,
+          code: fbError.code,
+          subcode: fbError.error_subcode
+        });
+        
+        // Handle specific Facebook error codes
+        switch (fbError.code) {
+          case 190:
+            throw new UnauthorizedException("Facebook token is invalid, expired, or revoked");
+          case 102:
+            throw new UnauthorizedException("Facebook session key is invalid");
+          case 2500:
+            throw new UnauthorizedException("User has not authorized the application");
+          default:
+            throw new UnauthorizedException(`Facebook API error: ${fbError.message}`);
+        }
+      }
+      
+      // Re-throw if it's already an UnauthorizedException
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      
+      console.log('🚨 Unexpected error:', error.message);
+      throw new UnauthorizedException("Failed to validate Facebook token");
     }
   }
 
-  async facebookLogin(email: string, facebookId: string) {
+  async facebookLogin(email: string, providerId: string, name: string) {
     let user = await this.usersService.findByEmail(email);
 
     if (user) {
       // If user exists but is not a Facebook user, return error
-      if (!user.isFacebookUser) {
+      if (user.provider !== AuthProvider.FACEBOOK) {
         throw new ConflictException(
           "Email already registered with a different method"
         );
       }
     } else {
       // Create new user if not exists
-      user = await this.usersService.createFacebookUser(email, facebookId);
+      user = await this.usersService.createFacebookUser(email, providerId, name);
     }
 
     const tokens = await this.tokenService.generateAuthTokens(user.id);
 
-    // Store the hashed refresh token in the database
+    // Store the hashed refresh token in the databasededdreer
     await this.usersService.setRefreshToken(user.id, tokens.refreshToken);
 
     return {
+      accessToken: tokens.accessToken,
       user: {
         id: user.id,
         username: user.username,
-        email: user.email,
         name: user.name,
+        email: user.email,
       },
-      ...tokens,
     };
   }
 
@@ -268,9 +297,9 @@ export class AuthService {
       throw new NotFoundException("User not found");
     }
 
-    // Check if user is a Facebook user
-    if (user.isFacebookUser) {
-      throw new BadRequestException("Facebook users cannot reset password. Please use Facebook login.");
+    // Check if user is not a local user (cannot reset password for social login users)
+    if (user.provider !== AuthProvider.LOCAL) {
+      throw new BadRequestException(`${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} users cannot reset password. Please use ${user.provider} login.`);
     }
 
     // Check if OTP already exists for this email
@@ -340,9 +369,9 @@ export class AuthService {
       throw new NotFoundException("User not found");
     }
 
-    // Check if user is a Facebook user
-    if (user.isFacebookUser) {
-      throw new BadRequestException("Facebook users cannot reset password. Please use Facebook login.");
+    // Check if user is not a local user (cannot reset password for social login users)
+    if (user.provider !== AuthProvider.LOCAL) {
+      throw new BadRequestException(`${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} users cannot reset password. Please use ${user.provider} login.`);
     }
 
     // Update user's password

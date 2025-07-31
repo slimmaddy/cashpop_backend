@@ -27,8 +27,8 @@ import { FileUploadModule } from "./file-upload/file-upload.module";
         password: configService.get("DB_PASSWORD", "postgres"),
         database: configService.get("DB_DATABASE", "cashpop"),
         entities: [__dirname + "/**/*.entity{.ts,.js}"],
-        synchronize:
-          configService.get("NODE_ENV", "development") !== "production",
+        migrations: [__dirname + "/migrations/*{.ts,.js}"],
+        synchronize: false, // Disabled to use migrations
         ssl:
           configService.get("DB_SSL", "false") === "true"
             ? { rejectUnauthorized: false }

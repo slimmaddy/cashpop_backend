@@ -5,7 +5,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { User } from "./entities/user.entity";
+import { User, AuthProvider } from "./entities/user.entity";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateProfileDto } from "./dto/update-profile.dto";
 import { ProfileResponseDto } from "./dto/profile-response.dto";
@@ -49,7 +49,7 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async createFacebookUser(email: string, facebookId: string): Promise<User> {
+  async createFacebookUser(email: string, providerId: string, name: string): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
       where: { email },
     });
@@ -72,8 +72,9 @@ export class UsersService {
     const user = this.usersRepository.create({
       email,
       username,
-      facebookId,
-      isFacebookUser: true,
+      name,
+      providerId,
+      provider: AuthProvider.FACEBOOK,
     });
 
     return this.usersRepository.save(user);

@@ -138,10 +138,10 @@ export class AuthController {
     description: "Email already registered with a different method",
   })
   async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto) {
-    const { email, facebookId } = await this.authService.validateFacebookToken(
+    const { email, facebookId, name } = await this.authService.validateFacebookToken(
       facebookAuthDto.token
     );
-    return this.authService.facebookLogin(email, facebookId);
+    return this.authService.facebookLogin(email, facebookId, name);
   }
 
   @UseGuards(JwtAuthGuard)
