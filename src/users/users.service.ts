@@ -1,25 +1,24 @@
-import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
-  InternalServerErrorException,
-} from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { User } from "./entities/user.entity";
-import { CreateUserDto } from "./dto/create-user.dto";
-import { UpdateProfileDto } from "./dto/update-profile.dto";
-import { ProfileResponseDto } from "./dto/profile-response.dto";
-import { plainToInstance } from "class-transformer";
-import { FileUploadService } from "../file-upload/file-upload.service";
+import {ConflictException, Injectable, InternalServerErrorException, Logger, NotFoundException} from "@nestjs/common";
+import {InjectRepository} from "@nestjs/typeorm";
+import {Repository} from "typeorm";
+import {User} from "./entities/user.entity";
+import {CreateUserDto} from "./dto/create-user.dto";
+import {UpdateProfileDto} from "./dto/update-profile.dto";
+import {ProfileResponseDto} from "./dto/profile-response.dto";
+import {plainToInstance} from "class-transformer";
+import {FileUploadService} from "../file-upload/file-upload.service";
 
 @Injectable()
 export class UsersService {
+
+  private readonly logger = new Logger(UsersService.name)
+
   constructor(
-    @InjectRepository(User)
-    private usersRepository: Repository<User>,
-    private readonly fileUploadService: FileUploadService
-  ) {}
+      @InjectRepository(User)
+      private usersRepository: Repository<User>,
+      private readonly fileUploadService: FileUploadService
+  ) {
+  }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Check if email already exists
@@ -62,7 +61,7 @@ export class UsersService {
         }
       }
     }
-    
+
     // If we've exhausted all retries, throw an error
     throw new InternalServerErrorException('Failed to create user with a unique invite code after multiple attempts');
   }
@@ -97,19 +96,111 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  /**
+   * Create a new user to log in with Google with email and googleId
+   * @param email User's email from Google
+   * @param googleId User's Google ID
+   * @returns Promise returns the newly created user
+   */
+  async createGoogleUser(email: string, googleId: string): Promise<User> {
+    this.logger.log(`Creating new Google user with email: ${email} and Google ID: ${googleId}`);
+
+    // Check if the user with the given email already exists in the system
+    await this.checkIfUserExists(email);
+
+    // Create a unique username from the email.
+    let username = await this.generateUniqueUsername(email)
+    this.logger.log(`User name after creation : ${username}`)
+
+    const user = this.usersRepository.create({
+      email,
+      username,
+      googleId,
+      isGoogleUser: true,
+      name: username,
+    });
+
+    return this.usersRepository.save(user);
+
+  }
+
+  /**
+   * Create a new user to log in with Apple with email and AppleId
+   * @param email User's email from Apple
+   * @param appleId User's Apple ID
+   * @returns Promise returns the newly created user
+   */
+  async createAppleUser(email: string, appleId: string): Promise<User> {
+
+    this.logger.log(`Creating new Apple user with email: ${email} and Apple ID: ${appleId}`);
+
+    // Check if the user with the given email already exists in the system
+    await this.checkIfUserExists(email);
+
+    // Create a unique username from the email.
+    let username = await this.generateUniqueUsername(email)
+    this.logger.log(`User name after creation : ${username}`)
+
+    const user = this.usersRepository.create({
+      email,
+      username,
+      appleId,
+      isGoogleUser: true,
+      name: username,
+    });
+
+    return this.usersRepository.save(user);
+
+  }
+
+  /**
+   * Check if the user with the given email already exists in the system
+   * @param email The email to check
+   * @throws ConflictException if the email is already registered
+   */
+  async checkIfUserExists(email: string): Promise<void> {
+    const existingUser = await this.usersRepository.findOne({where: {email}});
+    if (existingUser) {
+      throw new ConflictException("Email already exists");
+    }
+  }
+
+  /**
+   * Create a unique username from the email.
+   * If the username already exists, add a count to the end.
+   * @param email The user's email.
+   * @returns The unique username.
+   */
+  async generateUniqueUsername(email: string): Promise<string> {
+    // Create base username from the part before the @ sign of the email
+    const baseUsername = email.split('@')[0];
+    let username = baseUsername;
+    let counter = 1;
+
+    // Loop to find a username that doesn't exist
+    // The loop will stop when findByUsername returns null (no user found)
+    while (await this.findByUsername(username)) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    return username;
+  }
+
+
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.findOne({where: {email}});
   }
 
   async findByUsername(username: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { username } });
+    return this.usersRepository.findOne({where: {username}});
   }
 
   async setRefreshToken(
-    userId: string,
-    refreshToken: string | null
+      userId: string,
+      refreshToken: string | null
   ): Promise<void> {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
+    const user = await this.usersRepository.findOne({where: {id: userId}});
     user.refreshToken = refreshToken;
     // Set the refresh token creation timestamp when a new token is set
     // Set to null when the refresh token is removed (during logout)
@@ -125,14 +216,14 @@ export class UsersService {
    */
   async updatePassword(email: string, newPassword: string): Promise<User> {
     const user = await this.findByEmail(email);
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
 
     // Update password
     user.password = newPassword;
-    
+
     // Save user with updated password
     // The password will be automatically hashed by the entity's BeforeUpdate hook
     return this.usersRepository.save(user);
@@ -146,12 +237,12 @@ export class UsersService {
    * @returns Updated user profile
    */
   async updateProfile(
-    userId: string, 
-    updateProfileDto: UpdateProfileDto,
-    file?: Express.Multer.File
+      userId: string,
+      updateProfileDto: UpdateProfileDto,
+      file?: Express.Multer.File
   ): Promise<ProfileResponseDto> {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    
+    const user = await this.usersRepository.findOne({where: {id: userId}});
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
@@ -168,10 +259,10 @@ export class UsersService {
         user[key] = updateProfileDto[key];
       }
     });
-    
+
     // Save the updated user
     const updatedUser = await this.usersRepository.save(user);
-    
+
     // Transform to ProfileResponseDto to exclude sensitive data
     return plainToInstance(ProfileResponseDto, updatedUser);
   }
@@ -182,12 +273,12 @@ export class UsersService {
    * @returns User profile
    */
   async getProfile(userId: string): Promise<ProfileResponseDto> {
-    const user = await this.usersRepository.findOne({ where: { id: userId } });
-    
+    const user = await this.usersRepository.findOne({where: {id: userId}});
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
+
     // Transform to ProfileResponseDto to exclude sensitive data
     return plainToInstance(ProfileResponseDto, user);
   }
@@ -199,11 +290,11 @@ export class UsersService {
    */
   async removeAccount(userId: string): Promise<boolean> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
+
     try {
       // Delete the user from the database
       await this.usersRepository.remove(user);
@@ -221,4 +312,5 @@ export class UsersService {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   }
+
 }

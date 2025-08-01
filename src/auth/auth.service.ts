@@ -3,7 +3,7 @@ import {
   UnauthorizedException,
   ConflictException,
   BadRequestException,
-  NotFoundException,
+  NotFoundException, Logger,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { UsersService } from "../users/users.service";
@@ -14,12 +14,15 @@ import { TokenService } from "./token.service";
 
 @Injectable()
 export class AuthService {
+
+  private readonly logger = new Logger(AuthService.name)
+
   constructor(
-    private usersService: UsersService,
-    private valkeyService: ValkeyService,
-    private mailerService: MailerService,
-    private tokenService: TokenService,
-    private configService: ConfigService
+      private usersService: UsersService,
+      private valkeyService: ValkeyService,
+      private mailerService: MailerService,
+      private tokenService: TokenService,
+      private configService: ConfigService
   ) {}
 
   private generateOtp() {
@@ -43,22 +46,22 @@ export class AuthService {
    * @returns Object with user data and validation status, or null if user not found
    */
   async validateRefreshToken(username: string, refreshToken: string): Promise<{ user: any, status: string } | null> {
-      const user = await this.usersService.findByUsername(username);
-      if (!user) return null;
-      
-      // Get refresh token expiration time from ConfigService
-      const refreshExpSec = this.configService.get<number>('REFRESH_TOKEN_EXPIRATION_IN_SEC', 604800);
-      
-      // Pass the expiration time to the User entity's validateRefreshToken method
-      const validationResult = await user.validateRefreshToken(refreshToken, refreshExpSec);
-      
-      if (validationResult.isValid) {
-          const { password, refreshToken, ...result } = user;
-          return { user: result, status: 'valid' };
-      }
-      
-      // Return the validation status even if the token is invalid
-      return { user: null, status: validationResult.status };
+    const user = await this.usersService.findByUsername(username);
+    if (!user) return null;
+
+    // Get refresh token expiration time from ConfigService
+    const refreshExpSec = this.configService.get<number>('REFRESH_TOKEN_EXPIRATION_IN_SEC', 604800);
+
+    // Pass the expiration time to the User entity's validateRefreshToken method
+    const validationResult = await user.validateRefreshToken(refreshToken, refreshExpSec);
+
+    if (validationResult.isValid) {
+      const { password, refreshToken, ...result } = user;
+      return { user: result, status: 'valid' };
+    }
+
+    // Return the validation status even if the token is invalid
+    return { user: null, status: validationResult.status };
   }
 
   async login(user: any) {
@@ -76,6 +79,99 @@ export class AuthService {
       ...tokens,
     };
   }
+
+  /**
+   * Sign in or create a new Google user
+   * @param email User email from Google
+   * @param googleId User's Google ID
+   * @returns Object containing user information and token
+   */
+  async googleLogin(email: string, googleId: string) {
+
+    this.logger.log(`Incoming Google OAuth Request: ====> { Email: ${email}, Apple: ${googleId} }`);
+
+    // Check email
+    if (!email) {
+      throw new UnauthorizedException(
+          "Google authentication failed: No email provided"
+      );
+    }
+
+    let user = await this.usersService.findByEmail(email)
+    // Check for existing user in DB
+    if (!user) {
+      user = await this.usersService.createGoogleUser(email, googleId)
+    } else {
+      if (!user.isGoogleUser) {
+        throw new ConflictException(
+            "Email already registered with a different method"
+        );
+      }
+    }
+
+    const token = await this.tokenService.generateAuthTokens(user.id);
+    this.logger.log(`Generated auth tokens for user ID: ${user.id}. Token details: ${JSON.stringify(token)}`);
+
+    // Stores the refresh token in the database.
+    await this.usersService.setRefreshToken(user.id, token.refreshToken)
+
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+      ...token,
+    };
+  }
+
+  /**
+   * Sign in or create a new Apple user
+   * @param email User email from Apple
+   * @param appleId User's Apple ID
+   * @returns Object containing user information and token
+   */
+  async appleLogin(email: string, appleId: string) {
+    this.logger.log(`Incoming Apple OAuth Request: ====> { Email: ${email}, Apple: ${appleId} }`);
+
+    // check mail
+    if (!email) {
+      throw new UnauthorizedException(
+          "Apple authentication failed: No email provided"
+      );
+    }
+
+    // Check user by email, create new if not exist, or error if email used another method
+    let user = await this.usersService.findByEmail(email)
+    if (!user) {
+      user = await this.usersService.createAppleUser(email, appleId)
+      this.logger.log(`Created new Apple user with email: ${email} and Apple ID: ${appleId}`);
+    } else {
+      if (!user.isAppleUser) {
+        throw new ConflictException(
+            "Email already registered with a different method"
+        );
+      }
+    }
+
+    // Create access token and refresh token for user based on user.id
+    const token = await this.tokenService.generateAuthTokens(user.id);
+    this.logger.log(`Authentication code after creation : ====> ${token}`)
+
+    // Save refresh token to database for future token refresh
+    await this.usersService.setRefreshToken(user.id, token.refreshToken)
+
+    return {
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        name: user.name,
+      },
+      ...token,
+    };
+  }
+
 
   /**
    * Register a new user with verified email token
@@ -146,14 +242,14 @@ export class AuthService {
       // You would typically use HttpService from @nestjs/axios for this
       const axios = require("axios");
       const response = await axios.get(
-        `https://graph.facebook.com/me?fields=email,id&access_token=${token}`
+          `https://graph.facebook.com/me?fields=email,id&access_token=${token}`
       );
 
       const { email, id } = response.data;
 
       if (!email) {
         throw new UnauthorizedException(
-          "Facebook authentication failed: No email provided"
+            "Facebook authentication failed: No email provided"
         );
       }
 
@@ -174,7 +270,7 @@ export class AuthService {
       // If user exists but is not a Facebook user, return error
       if (!user.isFacebookUser) {
         throw new ConflictException(
-          "Email already registered with a different method"
+            "Email already registered with a different method"
         );
       }
     } else {
@@ -425,7 +521,7 @@ export class AuthService {
   async removeAccount(userId: string) {
     // Call the UsersService to remove the account
     const success = await this.usersService.removeAccount(userId);
-    
+
     if (success) {
       return {
         success: true,
