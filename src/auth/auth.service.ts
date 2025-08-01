@@ -166,6 +166,50 @@ export class AuthService {
     };
   }
 
+  async lineLogin(email: string, providerId: string, name: string) {
+    // For Line users, find by providerId first since email might be placeholder
+    let user = await this.usersService.findByProviderId(providerId, AuthProvider.LINE);
+
+    if (!user && !email.includes('line.placeholder')) {
+      // If not found by providerId and email is not placeholder, try finding by email
+      user = await this.usersService.findByEmail(email);
+    }
+
+    if (user) {
+      // If user exists but is not a Line user, return error
+      if (user.provider !== AuthProvider.LINE) {
+        throw new ConflictException(
+          "Account already registered with a different method"
+        );
+      }
+      
+      // If found by email but different providerId, update the providerId
+      if (user.providerId !== providerId) {
+        await this.usersService.updateProviderId(user.id, providerId);
+        user.providerId = providerId;
+      }
+    } else {
+      // Create new user if not exists
+      user = await this.usersService.createLineUser(email, providerId, name);
+    }
+
+    const tokens = await this.tokenService.generateAuthTokens(user.id);
+
+    // Store the hashed refresh token in the database
+    await this.usersService.setRefreshToken(user.id, tokens.refreshToken);
+
+    return {
+      accessToken: tokens.accessToken,
+      user: {
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        email: user.email,
+        provider: user.provider,
+      },
+    };
+  }
+
   /**
    * Initiate email verification by sending OTP
    * @param email Email address to verify

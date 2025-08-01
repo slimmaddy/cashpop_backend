@@ -80,12 +80,65 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
+  async createLineUser(email: string, providerId: string, name: string): Promise<User> {
+    // Check if user already exists by providerId for Line users (since email is placeholder)
+    const existingUserByProviderId = await this.usersRepository.findOne({
+      where: { providerId, provider: AuthProvider.LINE },
+    });
+
+    if (existingUserByProviderId) {
+      throw new ConflictException("Line user already exists");
+    }
+
+    // For Line users, also check by email in case it's a real email
+    if (!email.includes('line.placeholder')) {
+      const existingUser = await this.usersRepository.findOne({
+        where: { email },
+      });
+
+      if (existingUser) {
+        throw new ConflictException("Email already exists");
+      }
+    }
+
+    // Generate a username based on Line ID or name
+    let baseUsername = name ? name.toLowerCase().replace(/\s+/g, '_') : `line_${providerId.substring(0, 8)}`;
+    let username = baseUsername;
+    let counter = 1;
+
+    // Check if username exists, if so, append a number
+    while (await this.findByUsername(username)) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    const user = this.usersRepository.create({
+      email,
+      username,
+      name,
+      providerId,
+      provider: AuthProvider.LINE,
+    });
+
+    return this.usersRepository.save(user);
+  }
+
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
   }
 
   async findByUsername(username: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { username } });
+  }
+
+  async findByProviderId(providerId: string, provider: AuthProvider): Promise<User | null> {
+    return this.usersRepository.findOne({ 
+      where: { providerId, provider } 
+    });
+  }
+
+  async updateProviderId(userId: string, providerId: string): Promise<void> {
+    await this.usersRepository.update(userId, { providerId });
   }
 
   async setRefreshToken(

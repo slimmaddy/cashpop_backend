@@ -36,6 +36,7 @@ import { FindUsernameInitiateDto, FindUsernameInitiateResponseDto } from "./dto/
 import { FindUsernameVerifyOtpDto, FindUsernameVerifyOtpResponseDto } from "./dto/find-username-verify-otp.dto";
 import {LogoutResponseDto} from "./dto/logout.dto";
 import {TokensResponseDto} from "./dto/tokens-response.dto";
+import { LineAuthGuard } from "./guards/line-auth.guard";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -145,6 +146,7 @@ export class AuthController {
     return this.authService.facebookLogin(email, facebookId, name);
   }
   
+  @UseGuards(LineAuthGuard)
   @Post("line")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login with Line token" })
@@ -158,12 +160,11 @@ export class AuthController {
     status: 409,
     description: "Email already registered with a different method",
   })
-  // async lineLogin(@Body() lineAuthDto: LineAuthDto) {
-  //   const { token } = await this.authService.validateLineToken(
-  //     lineAuthDto.token
-  //   );
-    
-  // }
+  async lineLogin(@Body() lineAuthDto: LineAuthDto, @Req() req){
+    const { email, lineId, name } = req.user;
+    return this.authService.lineLogin(email, lineId, name);
+  }
+  
 
   @UseGuards(JwtAuthGuard)
   @Get("profile")
