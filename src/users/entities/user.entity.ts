@@ -10,6 +10,14 @@ import { Exclude } from "class-transformer";
 import * as bcrypt from "bcrypt";
 import { ApiProperty } from "@nestjs/swagger";
 
+export enum AuthProvider {
+  LOCAL = 'local',
+  FACEBOOK = 'facebook',
+  LINE = 'line',
+  APPLE = 'apple',
+  GOOGLE = 'google'
+}
+
 @Entity("users")
 export class User {
   @PrimaryGeneratedColumn("uuid")
@@ -32,15 +40,23 @@ export class User {
   @Exclude()
   password: string;
 
-  @Column({ default: false })
-  @ApiProperty({ description: "Whether the user is registered via Facebook" })
-  isFacebookUser: boolean;
+  @Column({
+    type: 'enum',
+    enum: AuthProvider,
+    default: AuthProvider.LOCAL
+  })
+  @ApiProperty({ 
+    description: "The authentication provider used for this user",
+    enum: AuthProvider,
+    default: AuthProvider.LOCAL
+  })
+  provider: AuthProvider;
 
   @Column({ nullable: true })
   @ApiProperty({
-    description: "The Facebook ID of the user if registered via Facebook",
+    description: "The external provider ID (Facebook ID, Google ID, etc.)",
   })
-  facebookId: string;
+  providerId: string;
 
   @Column({ nullable: true })
   @ApiProperty({ description: "The refresh token for JWT authentication" })

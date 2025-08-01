@@ -12,6 +12,7 @@ import { FacebookStrategy } from "./strategies/facebook.strategy";
 import { RefreshStrategy } from "./strategies/refresh.strategy";
 import { EmailVerificationStrategy } from "./strategies/email-verification.strategy";
 import { TokenService } from "./token.service";
+import { LineStrategy } from "./strategies/line.strategy";
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { TokenService } from "./token.service";
     RefreshStrategy,
     FacebookStrategy,
     EmailVerificationStrategy,
+    LineStrategy
   ],
   exports: [AuthService, TokenService],
 })
