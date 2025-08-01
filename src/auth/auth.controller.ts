@@ -19,8 +19,10 @@ import { AuthService } from "./auth.service";
 import { LocalAuthGuard } from "./guards/local-auth.guard";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { RefreshGuard } from "./guards/refresh.guard";
+import { FacebookAuthGuard } from "./guards/facebook-auth.guard";
 import { EmailVerificationGuard } from "./guards/email-verification.guard";
 import { FacebookAuthDto } from "./dto/facebook-auth.dto";
+import { LineAuthDto } from "./dto/line-auth.dto";
 import { AuthResponseDto } from "./dto/auth-response.dto";
 import { UserProfileDto } from "./dto/user-profile.dto";
 import { LoginDto } from "./dto/login.dto";
@@ -35,6 +37,7 @@ import { FindUsernameInitiateDto, FindUsernameInitiateResponseDto } from "./dto/
 import { FindUsernameVerifyOtpDto, FindUsernameVerifyOtpResponseDto } from "./dto/find-username-verify-otp.dto";
 import {LogoutResponseDto} from "./dto/logout.dto";
 import {TokensResponseDto} from "./dto/tokens-response.dto";
+import { LineAuthGuard } from "./guards/line-auth.guard";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -125,6 +128,7 @@ export class AuthController {
     return this.authService.refreshTokens(req.user);
   }
 
+  @UseGuards(FacebookAuthGuard)
   @Post("facebook")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login with Facebook token" })
@@ -138,12 +142,30 @@ export class AuthController {
     status: 409,
     description: "Email already registered with a different method",
   })
-  async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto) {
-    const { email, facebookId } = await this.authService.validateFacebookToken(
-      facebookAuthDto.token
-    );
-    return this.authService.facebookLogin(email, facebookId);
+  async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto, @Req() req) {
+    const { email, facebookId, name } = req.user;
+    return this.authService.facebookLogin(email, facebookId, name);
   }
+  
+  @UseGuards(LineAuthGuard)
+  @Post("line")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: "Login with Line token" })
+  @ApiResponse({
+    status: 200,
+    description: "Login successful",
+    type: AuthResponseDto
+  })
+  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({
+    status: 409,
+    description: "Email already registered with a different method",
+  })
+  async lineLogin(@Body() lineAuthDto: LineAuthDto, @Req() req){
+    const { email, lineId, name } = req.user;
+    return this.authService.lineLogin(email, lineId, name);
+  }
+  
 
   @UseGuards(JwtAuthGuard)
   @Get("profile")
