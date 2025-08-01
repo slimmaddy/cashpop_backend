@@ -134,61 +134,7 @@ export class AuthService {
     return { message: "Logout successful" };
   }
 
-  async validateFacebookToken(token: string): Promise<any> {
-    try {
-      const axios = require("axios");
-      const response = await axios.get(
-        `https://graph.facebook.com/me?fields=email,id,name&access_token=${token}`
-      );
-
-      const { email, id, name } = response.data;
-
-      if (!email) {
-        throw new UnauthorizedException(
-          "Facebook authentication failed: No email provided"
-        );
-      }
-
-      return {
-        email,
-        providerId: id,
-        name: name || email.split('@')[0], // Fallback name from email
-      };
-    } catch (error) {
-      console.log('❌ Facebook token validation failed');
-      
-      if (error.response?.data?.error) {
-        const fbError = error.response.data.error;
-        console.log('🚨 Facebook API Error:', {
-          message: fbError.message,
-          type: fbError.type,
-          code: fbError.code,
-          subcode: fbError.error_subcode
-        });
-        
-        // Handle specific Facebook error codes
-        switch (fbError.code) {
-          case 190:
-            throw new UnauthorizedException("Facebook token is invalid, expired, or revoked");
-          case 102:
-            throw new UnauthorizedException("Facebook session key is invalid");
-          case 2500:
-            throw new UnauthorizedException("User has not authorized the application");
-          default:
-            throw new UnauthorizedException(`Facebook API error: ${fbError.message}`);
-        }
-      }
-      
-      // Re-throw if it's already an UnauthorizedException
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      
-      console.log('🚨 Unexpected error:', error.message);
-      throw new UnauthorizedException("Failed to validate Facebook token");
-    }
-  }
-
+  
   async facebookLogin(email: string, providerId: string, name: string) {
     let user = await this.usersService.findByEmail(email);
 

@@ -140,10 +140,8 @@ export class AuthController {
     status: 409,
     description: "Email already registered with a different method",
   })
-  async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto) {
-    const { email, facebookId, name } = await this.authService.validateFacebookToken(
-      facebookAuthDto.token
-    );
+  async facebookLogin(@Body() facebookAuthDto: FacebookAuthDto, @Req() req) {
+    const { email, facebookId, name } = req.user;
     return this.authService.facebookLogin(email, facebookId, name);
   }
   
