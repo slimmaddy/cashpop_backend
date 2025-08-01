@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Exclude, Expose } from "class-transformer";
+import { AuthProvider } from "../entities/user.entity";
 
 @Exclude()
 export class ProfileResponseDto {
@@ -18,6 +19,13 @@ export class ProfileResponseDto {
   @Expose()
   @ApiProperty({ description: "The full name of the user", maxLength: 50 })
   name: string;
+
+  @Expose()
+  @ApiProperty({ 
+    description: "The authentication provider used for this user",
+    enum: AuthProvider
+  })
+  provider: AuthProvider;
 
   @Expose()
   @ApiProperty({ description: "The avatar URL of the user", required: false })
