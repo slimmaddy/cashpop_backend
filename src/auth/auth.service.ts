@@ -169,29 +169,61 @@ export class AuthService {
   }
 
   async lineLogin(email: string, providerId: string, name: string) {
-    // For Line users, find by providerId first since email might be placeholder
-    let user = await this.usersService.findByProviderId(providerId, AuthProvider.LINE);
-
-    if (!user && !email.includes('line.placeholder')) {
-      // If not found by providerId and email is not placeholder, try finding by email
-      user = await this.usersService.findByEmail(email);
+    // Validate that email is not a placeholder
+    if (!email || email.includes('line.placeholder')) {
+      throw new BadRequestException(
+        "LINE authentication requires a valid email address. Please ensure your LINE account has an email and grant email permission."
+      );
     }
 
-    if (user) {
-      // If user exists but is not a Line user, return error
-      if (user.provider !== AuthProvider.LINE) {
-        throw new ConflictException(
-          "Account already registered with a different method"
-        );
-      }
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new BadRequestException(
+        "LINE authentication failed: Invalid email format received from LINE."
+      );
+    }
+
+    // Try to find user by LINE providerId first
+    let user = await this.usersService.findByProviderId(providerId, AuthProvider.LINE);
+
+    if (!user) {
+      // If not found by providerId, try finding by email
+      user = await this.usersService.findByEmail(email);
       
-      // If found by email but different providerId, update the providerId
-      if (user.providerId !== providerId) {
-        await this.usersService.updateProviderId(user.id, providerId);
-        user.providerId = providerId;
+      if (user) {
+        // If user exists with this email but different provider, check conflict
+        if (user.provider !== AuthProvider.LINE) {
+          throw new ConflictException(
+            `This email is already registered with ${user.provider} authentication. Please use the same login method.`
+          );
+        }
+        
+        // Update providerId if user exists with same email but different LINE ID
+        if (user.providerId !== providerId) {
+          await this.usersService.updateProviderId(user.id, providerId);
+          user.providerId = providerId;
+        }
       }
     } else {
-      // Create new user if not exists
+      // User found by providerId, check if email changed
+      if (user.email !== email) {
+        // Check if new email is already taken by another user
+        const existingEmailUser = await this.usersService.findByEmail(email);
+        if (existingEmailUser && existingEmailUser.id !== user.id) {
+          throw new ConflictException(
+            "This email is already registered with another account."
+          );
+        }
+        
+        // Update user's email
+        await this.usersService.updateUserEmail(user.id, email);
+        user.email = email;
+      }
+    }
+
+    // Create new user if not exists
+    if (!user) {
       user = await this.usersService.createLineUser(email, providerId, name);
     }
 

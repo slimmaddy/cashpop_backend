@@ -39,3 +39,6 @@ coverage/
 # Misc
 .npm
 .eslintcache
+
+
+simple-dummy-data.sql

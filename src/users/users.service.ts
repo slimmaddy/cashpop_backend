@@ -159,6 +159,10 @@ export class UsersService {
     await this.usersRepository.update(userId, { providerId });
   }
 
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    await this.usersRepository.update(userId, { email });
+  }
+
   async setRefreshToken(
     userId: string,
     refreshToken: string | null

@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BeforeInsert, BeforeUpdate, AfterLoad,
+  OneToMany,
 } from "typeorm";
 import { Exclude } from "class-transformer";
 import * as bcrypt from "bcrypt";
@@ -92,6 +93,10 @@ export class User {
   @ApiProperty({ description: "The residential area of the user" })
   residentialArea: string;
 
+  // @Column({ nullable: true, unique: true })
+  // @ApiProperty({ description: "The phone number of the user" })
+  // phoneNumber: string;
+
   @Column({ nullable: true, unique: true })
   @ApiProperty({ description: "The invite code that can be shared with other users" })
   inviteCode: string;
@@ -107,6 +112,16 @@ export class User {
   @UpdateDateColumn()
   @ApiProperty({ description: "The date when the user was last updated" })
   updatedAt: Date;
+
+  // Relations
+  @OneToMany('Friendship', 'user')
+  friendships: any[];
+
+  @OneToMany('FriendSuggestion', 'user')
+  friendSuggestions: any[];
+
+  @OneToMany('SocialContact', 'user')
+  socialContacts: any[];
 
   // temp property to hold current value before update
   private _originalPassword: string;

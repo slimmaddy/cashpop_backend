@@ -36,8 +36,8 @@ export class LineStrategy extends PassportStrategy(
     try {
       console.log('🔍 Validating Line token in strategy...');
       
-      // Make a request to the Line API to validate the token and get user information
-      const response = await axios.get(
+      // First, get basic profile information
+      const profileResponse = await axios.get(
         `https://api.line.me/v2/profile`,
         {
           headers: {
@@ -46,23 +46,44 @@ export class LineStrategy extends PassportStrategy(
         }
       );
 
-      const { userId, displayName} = response.data;
+      const { userId, displayName } = profileResponse.data;
       
-      console.log('✅ Line token validated successfully in strategy');
-      console.log('📋 User info:', { userId, displayName });
-
       if (!userId) {
         throw new UnauthorizedException(
           "Line authentication failed: No user ID provided"
         );
       }
 
-      // Since Line API doesn't provide email by default, we'll use userId as unique identifier
-      // and create a placeholder email format
-      const placeholderEmail = `line_${userId}@line.placeholder`;
+      // Try to get email from OpenID Connect endpoint (requires 'email' scope)
+      let email = null;
+      try {
+        const openIdResponse = await axios.get(
+          `https://api.line.me/oauth2/v2.1/userinfo`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        email = openIdResponse.data.email;
+        console.log('� Email retrieved from LINE OpenID:', email || 'No email provided');
+      } catch (openIdError) {
+        console.log('⚠️ Could not retrieve email from LINE OpenID (may not have email scope)');
+      }
+
+      // Require email for LINE authentication
+      if (!email) {
+        throw new UnauthorizedException(
+          "LINE authentication failed: Email is required. Please ensure your LINE account has an email address and grant email permission."
+        );
+      }
+
+      console.log('✅ Line token validated successfully in strategy');
+      console.log('📋 User info:', { userId, displayName, email });
 
       return {
-        email: placeholderEmail,
+        email: email,
         lineId: userId,
         name: displayName || `LineUser_${userId.substring(0, 8)}`,
       };
