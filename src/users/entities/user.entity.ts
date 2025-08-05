@@ -117,12 +117,6 @@ export class User {
   @OneToMany('Friendship', 'user')
   friendships: any[];
 
-  @OneToMany('FriendSuggestion', 'user')
-  friendSuggestions: any[];
-
-  @OneToMany('SocialContact', 'user')
-  socialContacts: any[];
-
   // temp property to hold current value before update
   private _originalPassword: string;
 

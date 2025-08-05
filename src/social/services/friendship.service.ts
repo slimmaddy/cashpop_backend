@@ -25,6 +25,8 @@ export class FriendshipService {
     userId: string,
     query: GetFriendsDto
   ): Promise<{ friends: FriendshipResponseDto[]; total: number }> {
+    console.log('🔍 getFriends called with:', { userId, query });
+
     const { page = 1, limit = 20, search } = query;
     const skip = (page - 1) * limit;
 
@@ -36,6 +38,8 @@ export class FriendshipService {
         userId,
         status: FriendshipStatus.ACCEPTED
       });
+
+    console.log('📋 Query parameters:', { userId, status: FriendshipStatus.ACCEPTED });
 
     // Tìm kiếm theo tên hoặc username của friend
     if (search) {
@@ -51,7 +55,13 @@ export class FriendshipService {
       .skip(skip)
       .take(limit);
 
+    console.log('🔍 Executing query...');
     const [friendships, total] = await queryBuilder.getManyAndCount();
+    console.log('📊 Query results:', { friendshipsCount: friendships.length, total });
+
+    if (friendships.length > 0) {
+      console.log('📋 Sample friendship:', friendships[0]);
+    }
 
     // Transform data thành format cần thiết cho frontend
     const friends: FriendshipResponseDto[] = friendships.map(friendship => ({
@@ -70,6 +80,7 @@ export class FriendshipService {
       acceptedAt: friendship.acceptedAt,
     }));
 
+    console.log('✅ Returning result:', { friendsCount: friends.length, total });
     return { friends, total };
   }
 }
