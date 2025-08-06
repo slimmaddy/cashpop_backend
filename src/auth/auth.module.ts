@@ -13,6 +13,9 @@ import { RefreshStrategy } from "./strategies/refresh.strategy";
 import { EmailVerificationStrategy } from "./strategies/email-verification.strategy";
 import { TokenService } from "./token.service";
 import { LineStrategy } from "./strategies/line.strategy";
+import {AppleStrategy} from "./strategies/apple.strategy";
+import {GoogleStrategy} from "./strategies/google.strategy";
+
 
 @Module({
   imports: [
@@ -37,11 +40,14 @@ import { LineStrategy } from "./strategies/line.strategy";
     TokenService,
     LocalStrategy,
     JwtStrategy,
+    AppleStrategy,
     RefreshStrategy,
     FacebookStrategy,
+    GoogleStrategy,
     EmailVerificationStrategy,
     LineStrategy
   ],
   exports: [AuthService, TokenService],
 })
-export class AuthModule {}
+export class AuthModule {
+}
