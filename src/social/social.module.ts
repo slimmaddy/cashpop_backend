@@ -2,16 +2,16 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 // Entities
-import { Friendship } from './entities/friendship.entity';
+import { Relationship } from './entities/relationship.entity';
 import { User } from '../users/entities/user.entity';
 
 // Services
-import { FriendshipService } from './services/friendship.service';
-import { FriendSuggestionService } from './services/friend-suggestion.service';
+import { RelationshipService } from './services/relationship.service';
+import { SuggestionService } from './services/suggestion.service';
 
 // Controllers
-import { FriendshipController } from './controllers/friendship.controller';
-import { FriendSuggestionController } from './controllers/friend-suggestion.controller';
+import { RelationshipController } from './controllers/relationship.controller';
+import { SuggestionController } from './controllers/suggestion.controller';
 
 /**
  * Social Module - Hiển thị danh sách bạn bè và gợi ý kết bạn
@@ -29,21 +29,21 @@ import { FriendSuggestionController } from './controllers/friend-suggestion.cont
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Friendship, // Entity chính để lưu trữ mối quan hệ bạn bè
+      Relationship, // Entity chính để lưu trữ mối quan hệ bạn bè 
       User,       // Entity user để join lấy thông tin bạn bè
     ]),
   ],
   controllers: [
-    FriendshipController, // Controller duy nhất: GET /social/friends
-    FriendSuggestionController
+    RelationshipController, // GET /social/friends
+    SuggestionController, // GET /social/friends/suggestions // POST /social/contacts/sync/facebook
   ],
   providers: [
-    FriendshipService, // Service cho friends list
-    FriendSuggestionService, // Service cho friend suggestions
+    RelationshipService, // Service cho friends list
+    SuggestionService, // Service cho friend suggestions
   ],
   exports: [
-    FriendshipService, // Export để các module khác có thể sử dụng nếu cần
-    FriendSuggestionService, // Export friend suggestion service
+    RelationshipService, // Export để các module khác có thể sử dụng nếu cần
+    SuggestionService, // Export friend suggestion service
   ],
 })
 export class SocialModule {}

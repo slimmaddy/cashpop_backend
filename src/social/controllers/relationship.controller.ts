@@ -13,18 +13,18 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { FriendshipService } from '../services/friendship.service';
+import { RelationshipService } from '../services/relationship.service';
 import {
-  FriendshipResponseDto,
+  RelationshipResponseDto,
   GetFriendsDto,
-} from '../dto/friendship.dto';
+} from '../dto/relationship.dto';
 
 @ApiTags('Friends')
 @Controller('social/friends')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-export class FriendshipController {
-  constructor(private readonly friendshipService: FriendshipService) {}
+export class RelationshipController {
+  constructor(private readonly relationshipService: RelationshipService) {}
 
   @Get()
   @ApiOperation({
@@ -56,7 +56,7 @@ export class FriendshipController {
       properties: {
         friends: {
           type: 'array',
-          items: { $ref: '#/components/schemas/FriendshipResponseDto' }
+          items: { $ref: '#/components/schemas/RelationshipResponseDto' }
         },
         total: {
           type: 'number',
@@ -73,8 +73,7 @@ export class FriendshipController {
   async getFriends(
     @Req() req: any,
     @Query() query: GetFriendsDto
-  ): Promise<{ friends: FriendshipResponseDto[]; total: number }> {
-    console.log('🔍 Controller - req.user:', req.user);
-    return this.friendshipService.getFriends(req.user.userId, query);
+  ): Promise<{ friends: RelationshipResponseDto[]; total: number }> {
+    return this.relationshipService.getFriends(req.user.userId, query);
   }
 }

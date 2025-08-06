@@ -3,9 +3,9 @@ import { IsOptional, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
- * Response DTO for friend suggestions
+ * Response DTO for suggestions
  */
-export class FriendSuggestionResponseDto {
+export class SuggestionResponseDto {
   @ApiProperty({ description: 'Suggested user information' })
   user: {
     id: string;
@@ -42,9 +42,9 @@ export class FriendSuggestionResponseDto {
 }
 
 /**
- * Query parameters for friend suggestions API
+ * Query parameters for  suggestions API
  */
-export class GetFriendSuggestionsDto {
+export class GetSuggestionsDto {
   @ApiProperty({
     description: 'Page number',
     default: 1,

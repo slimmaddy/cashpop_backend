@@ -1,13 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
-import { FriendshipStatus } from '../entities/friendship.entity';
+import { RelationshipStatus } from '../entities/relationship.entity';
 
 /**
  * Response DTO cho danh sách bạn bè - chỉ chứa thông tin cần thiết để hiển thị
  */
-export class FriendshipResponseDto {
-  @ApiProperty({ description: 'Friendship ID' })
+export class RelationshipResponseDto {
+  @ApiProperty({ description: 'Relationship ID' })
   id: string;
 
   @ApiProperty({ description: 'Friend user information' })
@@ -20,22 +20,22 @@ export class FriendshipResponseDto {
   };
 
   @ApiProperty({
-    description: 'Friendship status - luôn là accepted cho endpoint này',
-    enum: FriendshipStatus,
+    description: 'Relationship status - luôn là accepted cho endpoint này',
+    enum: RelationshipStatus,
     example: 'accepted'
   })
-  status: FriendshipStatus;
+  status: RelationshipStatus;
 
-  @ApiProperty({ description: 'Who initiated the friendship', required: false })
+  @ApiProperty({ description: 'Who initiated the relationship', required: false })
   initiatedBy?: string;
 
   @ApiProperty({ description: 'Optional message when sending friend request', required: false })
   message?: string;
 
-  @ApiProperty({ description: 'When the friendship was created' })
+  @ApiProperty({ description: 'When the relationship was created' })
   createdAt: Date;
 
-  @ApiProperty({ description: 'When the friendship was accepted', required: false })
+  @ApiProperty({ description: 'When the relationship was accepted', required: false })
   acceptedAt?: Date;
 }
 

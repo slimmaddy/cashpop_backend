@@ -114,8 +114,8 @@ export class User {
   updatedAt: Date;
 
   // Relations
-  @OneToMany('Friendship', 'user')
-  friendships: any[];
+  @OneToMany('Relationship', 'user')
+  relationships: any[];
 
   // temp property to hold current value before update
   private _originalPassword: string;

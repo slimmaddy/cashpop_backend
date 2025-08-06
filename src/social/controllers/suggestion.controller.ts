@@ -13,18 +13,18 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';   
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { FriendSuggestionService } from '../services/friend-suggestion.service';
+import { SuggestionService } from '../services/suggestion.service';
 import {
-  FriendSuggestionResponseDto,
-  GetFriendSuggestionsDto,
-} from '../dto/friend-suggestion.dto';
+  SuggestionResponseDto,
+  GetSuggestionsDto,
+} from '../dto/suggestion.dto';
 
 @ApiTags('Friends')
 @ApiBearerAuth()
-@Controller('social/friend-suggestions')
+@Controller('social/suggestions')
 @UseGuards(JwtAuthGuard)
-export class FriendSuggestionController {
-  constructor(private readonly friendSuggestionService: FriendSuggestionService) {}
+export class SuggestionController {
+  constructor(private readonly suggestionService: SuggestionService) {}
 
   @Get()
   @ApiOperation({
@@ -50,7 +50,7 @@ export class FriendSuggestionController {
       properties: {
         suggestions: {
           type: 'array',
-          items: { $ref: '#/components/schemas/FriendSuggestionResponseDto' }
+          items: { $ref: '#/components/schemas/SuggestionResponseDto' }
         },
         total: {
           type: 'number',
@@ -63,10 +63,10 @@ export class FriendSuggestionController {
     status: 401,
     description: 'Not logged in or invalid token'
   })
-  async getFriendSuggestions(
+  async getSuggestions(
     @Req() req: any,
-    @Query() query: GetFriendSuggestionsDto
-  ): Promise<{ suggestions: FriendSuggestionResponseDto[]; total: number }> {
-    return this.friendSuggestionService.getFriendSuggestions(req.user.userId, query);
+    @Query() query: GetSuggestionsDto
+  ): Promise<{ suggestions: SuggestionResponseDto[]; total: number }> {
+    return this.suggestionService.getSuggestions(req.user.userId, query);
   }
 }

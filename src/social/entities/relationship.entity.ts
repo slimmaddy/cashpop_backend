@@ -10,18 +10,18 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-export enum FriendshipStatus {
+export enum RelationshipStatus {
   PENDING = 'pending',
   ACCEPTED = 'accepted',
   BLOCKED = 'blocked',
   REJECTED = 'rejected',
 }
 
-@Entity('friendships')
+@Entity('relationships')
 @Index(['userId', 'friendId'], { unique: true })
 @Index(['userId', 'status'])
 @Index(['status', 'createdAt'])
-export class Friendship {
+export class Relationship {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -33,10 +33,10 @@ export class Friendship {
 
   @Column({
     type: 'enum',
-    enum: FriendshipStatus,
-    default: FriendshipStatus.PENDING,
+    enum: RelationshipStatus,
+    default: RelationshipStatus.PENDING,
   })
-  status: FriendshipStatus;
+  status: RelationshipStatus;
 
   @Column({ name: 'initiated_by' })
   initiatedBy: string; // userId của người gửi lời mời kết bạn
@@ -57,7 +57,7 @@ export class Friendship {
   updatedAt: Date;
 
   // Relations
-  @ManyToOne(() => User, (user) => user.friendships)
+  @ManyToOne(() => User, (user) => user.relationships)
   @JoinColumn({ name: 'user_id' })
   user: User;
 
