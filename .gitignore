@@ -40,5 +40,6 @@ coverage/
 .npm
 .eslintcache
 
-
+#dummy-data
 simple-dummy-data.sql
+create-suggestion-test-data.sql

@@ -19,7 +19,7 @@ import {
   GetFriendsDto,
 } from '../dto/friendship.dto';
 
-@ApiTags('Friends List')
+@ApiTags('Friends')
 @Controller('social/friends')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
@@ -28,39 +28,29 @@ export class FriendshipController {
 
   @Get()
   @ApiOperation({
-    summary: 'Lấy danh sách bạn bè',
-    description: `
-    Endpoint đơn giản để hiển thị danh sách bạn bè đã kết bạn thành công.
-
-    Tính năng:
-    - Chỉ hiển thị những friendship có status = 'accepted'
-    - Hỗ trợ phân trang (pagination)
-    - KHÔNG có search - chỉ hiển thị danh sách thuần túy
-    - Trả về cả email và username của bạn bè (tất cả đều có username)
-    - Sắp xếp theo thời gian kết bạn (mới nhất trước)
-    `
+    summary: 'Get a list of friends',
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    description: 'Số trang (bắt đầu từ 1)',
-    example: 1
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    description: 'Số lượng bạn bè trên mỗi trang (tối đa 100)',
-    example: 20
-  })
-  @ApiQuery({
-    name: 'search',
-    required: false,
-    description: 'Tìm kiếm theo tên hoặc username của bạn bè',
-    example: 'john'
-  })
+  // @ApiQuery({
+  //   name: 'page',
+  //   required: false,
+  //   description: 'Số trang (bắt đầu từ 1)',
+  //   example: 1
+  // })
+  // @ApiQuery({
+  //   name: 'limit',
+  //   required: false,
+  //   description: 'Số lượng bạn bè trên mỗi trang (tối đa 100)',
+  //   example: 20
+  // })
+  // @ApiQuery({
+  //   name: 'search',
+  //   required: false,
+  //   description: 'Tìm kiếm theo tên hoặc username của bạn bè',
+  //   example: 'john'
+  // })
   @ApiResponse({
     status: 200,
-    description: 'Lấy danh sách bạn bè thành công',
+    description: 'Get a list of friends successfully',
     schema: {
       type: 'object',
       properties: {
@@ -70,7 +60,7 @@ export class FriendshipController {
         },
         total: {
           type: 'number',
-          description: 'Tổng số bạn bè',
+          description: 'Total number of friends',
           example: 25
         }
       }
@@ -78,7 +68,7 @@ export class FriendshipController {
   })
   @ApiResponse({
     status: 401,
-    description: 'Chưa đăng nhập hoặc token không hợp lệ'
+    description: 'Not logged in or invalid token'
   })
   async getFriends(
     @Req() req: any,
