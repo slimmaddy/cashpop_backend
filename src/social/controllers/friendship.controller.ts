@@ -84,6 +84,7 @@ export class FriendshipController {
     @Req() req: any,
     @Query() query: GetFriendsDto
   ): Promise<{ friends: FriendshipResponseDto[]; total: number }> {
-    return this.friendshipService.getFriends(req.user.id, query);
+    console.log('🔍 Controller - req.user:', req.user);
+    return this.friendshipService.getFriends(req.user.userId, query);
   }
 }
