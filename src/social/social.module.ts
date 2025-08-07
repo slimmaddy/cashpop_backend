@@ -16,15 +16,17 @@ import { RelationshipController } from './controllers/relationship.controller';
 import { SuggestionController } from './controllers/suggestion.controller';
 
 /**
- * Social Module - Hiển thị danh sách bạn bè và gợi ý kết bạn
+ * Social Module - Quản lý mối quan hệ bạn bè và gợi ý kết bạn
  *
  * Chức năng:
  * - Hiển thị danh sách bạn bè đã kết bạn thành công (status = accepted)
+ * - Gửi lời mời kết bạn thông qua email
+ * - Hiển thị lời mời kết bạn đã nhận (status = pending)
+ * - Chấp nhận/từ chối lời mời kết bạn
  * - Gợi ý kết bạn thông minh (bạn của bạn bè, chưa kết bạn)
- * - Hỗ trợ phân trang cho cả hai tính năng
+ * - Hỗ trợ phân trang cho tất cả tính năng
  *
  * Không bao gồm:
- * - Gửi/nhận lời mời kết bạn
  * - Đồng bộ danh bạ
  * - Block/unblock user
  */
@@ -38,8 +40,8 @@ import { SuggestionController } from './controllers/suggestion.controller';
     UsersModule, // Import UsersModule để sử dụng UsersService
   ],
   controllers: [
-    RelationshipController, // GET /social/friends
-    SuggestionController, // GET /social/friends/suggestions // POST /social/contacts/sync/facebook
+    RelationshipController, // GET /social/friends, POST /social/friends/request, GET /social/friends/requests/received, POST /social/friends/requests/:id/accept, POST /social/friends/requests/:id/reject
+    SuggestionController, // GET /social/suggestions
   ],
   providers: [
     RelationshipService, // Service cho friends list

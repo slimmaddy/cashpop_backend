@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max, IsEmail, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RelationshipStatus } from '../entities/relationship.entity';
 
@@ -77,4 +77,117 @@ export class GetFriendsDto {
   @IsOptional()
   @IsString()
   search?: string;
+}
+
+/**
+ * DTO để gửi lời mời kết bạn
+ */
+export class SendFriendRequestDto {
+  @ApiProperty({ 
+    description: 'Email của người muốn gửi lời mời kết bạn',
+    example: 'friend@example.com'
+  })
+  @IsEmail({}, { message: 'Email không hợp lệ' })
+  friendEmail: string;
+
+  @ApiProperty({ 
+    description: 'Tin nhắn kèm theo (tùy chọn)', 
+    required: false,
+    example: 'Xin chào! Tôi muốn kết bạn với bạn.'
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500, { message: 'Tin nhắn không được vượt quá 500 ký tự' })
+  message?: string;
+}
+
+/**
+ * Response DTO khi gửi lời mời kết bạn
+ */
+export class SendFriendRequestResponseDto {
+  @ApiProperty({ description: 'Success status' })
+  success: boolean;
+
+  @ApiProperty({ description: 'Response message' })
+  message: string;
+
+  @ApiProperty({ description: 'Relationship data if created', required: false })
+  relationship?: RelationshipResponseDto;
+}
+
+/**
+ * Response DTO cho lời mời kết bạn đã nhận
+ */
+export class FriendRequestDto {
+  @ApiProperty({ description: 'Request ID' })
+  id: string;
+
+  @ApiProperty({ description: 'Sender user information' })
+  sender: {
+    id: string;
+    email: string;
+    username: string;
+    name: string;
+    avatar?: string;
+  };
+
+  @ApiProperty({ description: 'Message from sender', required: false })
+  message?: string;
+
+  @ApiProperty({ description: 'When the request was created' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Whether current user can accept this request' })
+  canAccept: boolean;
+
+  @ApiProperty({ description: 'Whether current user can reject this request' })
+  canReject: boolean;
+}
+
+/**
+ * Query parameters cho API lấy lời mời kết bạn
+ */
+export class GetFriendRequestsDto {
+  @ApiProperty({
+    description: 'Page number',
+    default: 1,
+    required: false,
+    minimum: 1
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({
+    description: 'Items per page',
+    default: 20,
+    required: false,
+    minimum: 1,
+    maximum: 100
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  limit?: number = 20;
+}
+
+/**
+ * Response DTO cho accept/reject friend request
+ */
+export class FriendRequestActionResponseDto {
+  @ApiProperty({ description: 'Success status' })
+  success: boolean;
+
+  @ApiProperty({ description: 'Response message' })
+  message: string;
+
+  @ApiProperty({ description: 'Updated relationship data', required: false })
+  relationship?: RelationshipResponseDto;
+
+  @ApiProperty({ description: 'Request ID that was processed', required: false })
+  requestId?: string;
 }
