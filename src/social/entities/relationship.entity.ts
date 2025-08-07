@@ -2,13 +2,10 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  JoinColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
 
 export enum RelationshipStatus {
   PENDING = 'pending',
@@ -18,18 +15,18 @@ export enum RelationshipStatus {
 }
 
 @Entity('relationships')
-@Index(['userId', 'friendId'], { unique: true })
-@Index(['userId', 'status'])
+@Index(['userEmail', 'friendEmail'], { unique: true })
+@Index(['userEmail', 'status'])
 @Index(['status', 'createdAt'])
 export class Relationship {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'user_id' })
-  userId: string;
+  @Column({ name: 'user_email' })
+  userEmail: string;
 
-  @Column({ name: 'friend_id' })
-  friendId: string;
+  @Column({ name: 'friend_email' })
+  friendEmail: string;
 
   @Column({
     type: 'enum',
@@ -39,7 +36,7 @@ export class Relationship {
   status: RelationshipStatus;
 
   @Column({ name: 'initiated_by' })
-  initiatedBy: string; // userId của người gửi lời mời kết bạn
+  initiatedBy: string; // email của người gửi lời mời kết bạn
 
   @Column({ type: 'text', nullable: true })
   message: string; // Tin nhắn kèm theo lời mời kết bạn
@@ -56,16 +53,5 @@ export class Relationship {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
 
-  // Relations
-  @ManyToOne(() => User, (user) => user.relationships)
-  @JoinColumn({ name: 'user_id' })
-  user: User;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'friend_id' })
-  friend: User;
-
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'initiated_by' })
-  initiator: User;
+  // Relations removed - using email directly instead of foreign keys
 }

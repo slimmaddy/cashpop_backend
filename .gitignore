@@ -44,3 +44,4 @@ coverage/
 simple-dummy-data.sql
 create-suggestion-test-data.sql
 create-relationships-data.sql
+create-friend-suggestion-test-data.sql

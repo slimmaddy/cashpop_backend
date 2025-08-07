@@ -14,6 +14,7 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RelationshipService } from '../services/relationship.service';
+import { UsersService } from '../../users/users.service';
 import {
   RelationshipResponseDto,
   GetFriendsDto,
@@ -24,7 +25,10 @@ import {
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class RelationshipController {
-  constructor(private readonly relationshipService: RelationshipService) {}
+  constructor(
+    private readonly relationshipService: RelationshipService,
+    private readonly usersService: UsersService
+  ) {}
 
   @Get()
   @ApiOperation({
@@ -74,6 +78,20 @@ export class RelationshipController {
     @Req() req: any,
     @Query() query: GetFriendsDto
   ): Promise<{ friends: RelationshipResponseDto[]; total: number }> {
-    return this.relationshipService.getFriends(req.user.userId, query);
+    console.log('🔍 Controller getFriends:');
+    console.log('- req.user:', req.user);
+    console.log('- req.user.userId:', req.user?.userId);
+    console.log('- query:', query);
+
+    // Lấy user từ database bằng userId
+    const user = await this.usersService.findById(req.user.userId);
+    if (!user) {
+      console.log('❌ User not found with userId:', req.user.userId);
+      return { friends: [], total: 0 };
+    }
+
+    console.log('✅ Found user:', { id: user.id, email: user.email, username: user.username });
+
+    return this.relationshipService.getFriends(user.email, query);
   }
 }

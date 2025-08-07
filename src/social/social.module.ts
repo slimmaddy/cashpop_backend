@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UsersModule } from '../users/users.module';
 
 // Entities
 import { Relationship } from './entities/relationship.entity';
+import { Suggestion } from './entities/suggestion.entity';
 import { User } from '../users/entities/user.entity';
 
 // Services
@@ -29,9 +31,11 @@ import { SuggestionController } from './controllers/suggestion.controller';
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      Relationship, // Entity chính để lưu trữ mối quan hệ bạn bè 
-      User,       // Entity user để join lấy thông tin bạn bè
+      Relationship, // Entity chính để lưu trữ mối quan hệ bạn bè
+      Suggestion,   // Entity để lưu trữ friend suggestions
+      User,         // Entity user để join lấy thông tin bạn bè
     ]),
+    UsersModule, // Import UsersModule để sử dụng UsersService
   ],
   controllers: [
     RelationshipController, // GET /social/friends

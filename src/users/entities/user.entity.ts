@@ -10,6 +10,7 @@ import {
 import { Exclude } from "class-transformer";
 import * as bcrypt from "bcrypt";
 import { ApiProperty } from "@nestjs/swagger";
+import { Suggestion } from "src/social/entities/suggestion.entity";
 
 export enum AuthProvider {
   LOCAL = 'local',
@@ -116,6 +117,13 @@ export class User {
   // Relations
   @OneToMany('Relationship', 'user')
   relationships: any[];
+
+  // Thêm vào User entity
+  @OneToMany(() => Suggestion, (suggestion) => suggestion.user)
+  receivedSuggestions: Suggestion[];
+
+  @OneToMany(() => Suggestion, (suggestion) => suggestion.suggestedUser)
+  givenSuggestions: Suggestion[];
 
   // temp property to hold current value before update
   private _originalPassword: string;
