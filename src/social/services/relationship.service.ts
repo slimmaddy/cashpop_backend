@@ -146,6 +146,34 @@ export class RelationshipService {
       existingRelationship.acceptedAt = null;
       existingRelationship.blockedAt = null;
       relationship = await this.relationshipRepository.save(existingRelationship);
+
+      // ✅ FIX #5: Tìm và cập nhật reverse relationship cũ
+      const oldReverseRelationship = await this.relationshipRepository.findOne({
+        where: {
+          userEmail: friendEmail,
+          friendEmail: senderEmail,
+          status: RelationshipStatus.REJECTED,
+        }
+      });
+      
+      if (oldReverseRelationship) {
+        oldReverseRelationship.status = RelationshipStatus.RECEIVED;
+        oldReverseRelationship.initiatedBy = senderEmail;
+        oldReverseRelationship.message = message || null;
+        oldReverseRelationship.acceptedAt = null;
+        oldReverseRelationship.blockedAt = null;
+        await this.relationshipRepository.save(oldReverseRelationship);
+      } else {
+        // Nếu không tìm thấy reverse relationship cũ, tạo mới
+        const newReverseRelationship = this.relationshipRepository.create({
+          userEmail: friendEmail,
+          friendEmail: senderEmail,
+          status: RelationshipStatus.RECEIVED,
+          initiatedBy: senderEmail,
+          message: message || null,
+        });
+        await this.relationshipRepository.save(newReverseRelationship);
+      }
     } else {
       // Tạo relationship mới
       relationship = this.relationshipRepository.create({
@@ -156,17 +184,17 @@ export class RelationshipService {
         message: message || null,
       });
       relationship = await this.relationshipRepository.save(relationship);
-    }
 
-    // 5. Tạo relationship ngược lại (bidirectional)
-    const reverseRelationship = this.relationshipRepository.create({
-      userEmail: friendEmail,
-      friendEmail: senderEmail,
-      status: RelationshipStatus.PENDING,
-      initiatedBy: senderEmail,
-      message: message || null,
-    });
-    await this.relationshipRepository.save(reverseRelationship);
+      // 5. Tạo relationship ngược lại (bidirectional)
+      const reverseRelationship = this.relationshipRepository.create({
+        userEmail: friendEmail,
+        friendEmail: senderEmail,
+        status: RelationshipStatus.RECEIVED,
+        initiatedBy: senderEmail,
+        message: message || null,
+      });
+      await this.relationshipRepository.save(reverseRelationship);
+    }
 
     return {
       success: true,
@@ -199,7 +227,6 @@ export class RelationshipService {
     return await this.relationshipRepository.findOne({
       where: [
         { userEmail, friendEmail },
-        { userEmail: friendEmail, friendEmail: userEmail },
       ],
     });
   }
@@ -215,17 +242,17 @@ export class RelationshipService {
     const skip = (page - 1) * limit;
 
     // Tìm những relationship mà user là người nhận và status = PENDING
-    const queryBuilder = this.relationshipRepository
-      .createQueryBuilder('relationship')
-      .where('relationship.friendEmail = :userEmail AND relationship.status = :status', {
-        userEmail,
-        status: RelationshipStatus.PENDING
-      })
-      .orderBy('relationship.createdAt', 'DESC')
-      .skip(skip)
-      .take(limit);
-
-    const [relationships, total] = await queryBuilder.getManyAndCount();
+    const [relationships, total] = await this.relationshipRepository.findAndCount({
+    where: {
+      friendEmail: userEmail, // ✅ User hiện tại là người nhận lời mời
+      status: RelationshipStatus.PENDING,
+    },
+    order: {
+      createdAt: 'DESC',
+    },
+    take: limit,
+    skip,
+  });
 
     console.log('🔍 Debug getFriendRequests:');
     console.log('- userEmail:', userEmail);
@@ -266,6 +293,16 @@ export class RelationshipService {
     userEmail: string,
     requestId: string
   ): Promise<FriendRequestActionResponseDto> {
+
+    // Kiểm tra xem lời mời có tồn tại không và vẫn còn PENDING
+    const currentRelationship = await this.relationshipRepository.findOne({
+      where: { id: requestId }
+    });
+    
+    if (!currentRelationship || currentRelationship.status !== RelationshipStatus.PENDING) {
+      throw new ConflictException('Lời mời đã được xử lý hoặc không tồn tại');
+    }
+    
     // 1. Tìm relationship request
     const relationship = await this.relationshipRepository.findOne({
       where: {
@@ -287,8 +324,8 @@ export class RelationshipService {
     // 3. Cập nhật relationship ngược lại (bidirectional)
     const reverseRelationship = await this.relationshipRepository.findOne({
       where: {
-        userEmail: userEmail,
-        friendEmail: relationship.userEmail,
+        userEmail: relationship.userEmail,
+        friendEmail: userEmail,
       },
     });
 

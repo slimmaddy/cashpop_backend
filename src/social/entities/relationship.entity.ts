@@ -12,6 +12,7 @@ export enum RelationshipStatus {
   ACCEPTED = 'accepted',
   BLOCKED = 'blocked',
   REJECTED = 'rejected',
+  RECEIVED = 'received',
 }
 
 @Entity('relationships')
