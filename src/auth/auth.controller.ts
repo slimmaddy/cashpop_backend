@@ -38,35 +38,39 @@ import { FindUsernameVerifyOtpDto, FindUsernameVerifyOtpResponseDto } from "./dt
 import {LogoutResponseDto} from "./dto/logout.dto";
 import {TokensResponseDto} from "./dto/tokens-response.dto";
 import { LineAuthGuard } from "./guards/line-auth.guard";
+import {GoogleAuthGuard} from "./guards/google-auth.guard";
+import {AppleAuthGuard} from "./guards/apple-auth.guard";
+
 
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
 
+  constructor(private readonly authService: AuthService) {
+  }
 
   @Post("verify-email-initiate")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Initiate email verification by sending OTP" })
+  @ApiOperation({summary: "Initiate email verification by sending OTP"})
   @ApiResponse({
     status: 200,
     description: "Verification email sent",
     type: VerifyEmailInitiateResponseDto
   })
-  @ApiResponse({ status: 409, description: "Email already exists" })
+  @ApiResponse({status: 409, description: "Email already exists"})
   async verifyEmailInitiate(@Body() verifyEmailInitiateDto: VerifyEmailInitiateDto) {
     return this.authService.initiateEmailVerification(verifyEmailInitiateDto.email);
   }
 
   @Post("verify-email-otp")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Verify email with OTP" })
+  @ApiOperation({summary: "Verify email with OTP"})
   @ApiResponse({
     status: 200,
     description: "Email verified successfully",
     type: VerifyEmailOtpResponseDto
   })
-  @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
+  @ApiResponse({status: 400, description: "Invalid or expired OTP"})
   async verifyEmailOtp(@Body() verifyEmailOtpDto: VerifyEmailOtpDto) {
     return this.authService.verifyEmailOtp(verifyEmailOtpDto.email, verifyEmailOtpDto.otp);
   }
@@ -74,14 +78,14 @@ export class AuthController {
   @UseGuards(EmailVerificationGuard)
   @Post("register")
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: "Register a new user with verified email token" })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiOperation({summary: "Register a new user with verified email token"})
+  @ApiResponse({
+    status: 201,
     description: "User successfully registered",
     type: AuthResponseDto
   })
-  @ApiResponse({ status: 409, description: "Email already exists" })
-  @ApiResponse({ status: 401, description: "Invalid or expired verification token" })
+  @ApiResponse({status: 409, description: "Email already exists"})
+  @ApiResponse({status: 401, description: "Invalid or expired verification token"})
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
@@ -89,13 +93,13 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Login with email and password" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Login with email and password"})
+  @ApiResponse({
+    status: 200,
     description: "Login successful",
     type: AuthResponseDto
   })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({status: 401, description: "Unauthorized"})
   async login(@Body() loginDto: LoginDto, @Req() req) {
     return this.authService.login(req.user);
   }
@@ -104,9 +108,9 @@ export class AuthController {
   @Post("logout")
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Logout" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Logout"})
+  @ApiResponse({
+    status: 200,
     description: "Logout successful",
     type: LogoutResponseDto
   })
@@ -117,13 +121,13 @@ export class AuthController {
   @UseGuards(RefreshGuard)
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Refresh access token" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Refresh access token"})
+  @ApiResponse({
+    status: 200,
     description: "Token refreshed successfully",
     type: TokensResponseDto
   })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({status: 401, description: "Unauthorized"})
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req) {
     return this.authService.refreshTokens(req.user);
   }
@@ -131,13 +135,13 @@ export class AuthController {
   @UseGuards(FacebookAuthGuard)
   @Post("facebook")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Login with Facebook token" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Login with Facebook token"})
+  @ApiResponse({
+    status: 200,
     description: "Login successful",
     type: AuthResponseDto
   })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
+  @ApiResponse({status: 401, description: "Unauthorized"})
   @ApiResponse({
     status: 409,
     description: "Email already registered with a different method",
@@ -165,14 +169,33 @@ export class AuthController {
     const { email, lineId, name } = req.user;
     return this.authService.lineLogin(email, lineId, name);
   }
-  
+
+  @Post("google")
+  @UseGuards(GoogleAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({summary: "Login with Google token"})
+  async googleLogin(@Req() req) {
+    const {email, googleId} = req.user
+    return this.authService.googleLogin(email, googleId);
+  }
+
+
+  @Post("apple")
+  @UseGuards(AppleAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({summary: "Login with Apple token"})
+  async appleLogin(@Req() req) {
+    const {email, appleId} = req.user
+    return this.authService.appleLogin(email, appleId);
+  }
+
 
   @UseGuards(JwtAuthGuard)
   @Get("profile")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get user profile" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Get user profile"})
+  @ApiResponse({
+    status: 200,
     description: "Return the user profile",
     type: UserProfileDto
   })
@@ -182,82 +205,82 @@ export class AuthController {
 
   @Post("reset-password-initiate")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Initiate password reset by sending OTP" })
+  @ApiOperation({summary: "Initiate password reset by sending OTP"})
   @ApiResponse({
     status: 200,
     description: "Password reset email sent",
     type: ResetPasswordInitiateResponseDto
   })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "OTP already sent or Facebook user" })
+  @ApiResponse({status: 404, description: "User not found"})
+  @ApiResponse({status: 400, description: "OTP already sent or Facebook user"})
   async resetPasswordInitiate(@Body() resetPasswordInitiateDto: ResetPasswordInitiateDto) {
     return this.authService.initiatePasswordReset(resetPasswordInitiateDto.email);
   }
 
   @Post("reset-password-verify-otp")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Verify password reset OTP" })
+  @ApiOperation({summary: "Verify password reset OTP"})
   @ApiResponse({
     status: 200,
     description: "OTP verified successfully",
     type: ResetPasswordVerifyOtpResponseDto
   })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
+  @ApiResponse({status: 404, description: "User not found"})
+  @ApiResponse({status: 400, description: "Invalid or expired OTP"})
   async resetPasswordVerifyOtp(@Body() resetPasswordVerifyOtpDto: ResetPasswordVerifyOtpDto) {
     return this.authService.verifyPasswordResetOtp(
-      resetPasswordVerifyOtpDto.email, 
-      resetPasswordVerifyOtpDto.otp
+        resetPasswordVerifyOtpDto.email,
+        resetPasswordVerifyOtpDto.otp
     );
   }
 
   @UseGuards(EmailVerificationGuard)
   @Post("reset-password-submit")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Reset password with verified email token" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Reset password with verified email token"})
+  @ApiResponse({
+    status: 200,
     description: "Password reset successful",
     type: ResetPasswordSubmitResponseDto
   })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "Facebook user cannot reset password" })
-  @ApiResponse({ status: 401, description: "Invalid or expired verification token" })
+  @ApiResponse({status: 404, description: "User not found"})
+  @ApiResponse({status: 400, description: "Facebook user cannot reset password"})
+  @ApiResponse({status: 401, description: "Invalid or expired verification token"})
   async resetPasswordSubmit(@Body() resetPasswordSubmitDto: ResetPasswordSubmitDto) {
     return this.authService.resetPassword(
-      resetPasswordSubmitDto.email, 
-      resetPasswordSubmitDto.password
+        resetPasswordSubmitDto.email,
+        resetPasswordSubmitDto.password
     );
   }
 
   @Post("find-username-initiate")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Initiate find username by sending OTP" })
+  @ApiOperation({summary: "Initiate find username by sending OTP"})
   @ApiResponse({
     status: 200,
     description: "Find username email sent",
     type: FindUsernameInitiateResponseDto
   })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "OTP already sent" })
+  @ApiResponse({status: 404, description: "User not found"})
+  @ApiResponse({status: 400, description: "OTP already sent"})
   async findUsernameInitiate(@Body() findUsernameInitiateDto: FindUsernameInitiateDto) {
     return this.authService.initiateFindUsername(findUsernameInitiateDto.email);
   }
 
   @Post("find-username-verify-otp")
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: "Verify OTP and return username" })
+  @ApiOperation({summary: "Verify OTP and return username"})
   @ApiResponse({
     status: 200,
     description: "Username found successfully",
     type: FindUsernameVerifyOtpResponseDto
   })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
+  @ApiResponse({status: 404, description: "User not found"})
+  @ApiResponse({status: 400, description: "Invalid or expired OTP"})
   async findUsernameVerifyOtp(@Body() findUsernameVerifyOtpDto: FindUsernameVerifyOtpDto) {
     return this.authService.verifyFindUsernameOtp(
-      findUsernameVerifyOtpDto.email, 
-      findUsernameVerifyOtpDto.otp
+        findUsernameVerifyOtpDto.email,
+        findUsernameVerifyOtpDto.otp
     );
   }
 
@@ -265,9 +288,9 @@ export class AuthController {
   @Delete("account")
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Remove user account" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiOperation({summary: "Remove user account"})
+  @ApiResponse({
+    status: 200,
     description: "Account removed successfully",
     schema: {
       type: "object",
@@ -283,9 +306,9 @@ export class AuthController {
       }
     }
   })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 500, description: "Internal server error" })
+  @ApiResponse({status: 401, description: "Unauthorized"})
+  @ApiResponse({status: 404, description: "User not found"})
+  @ApiResponse({status: 500, description: "Internal server error"})
   async removeAccount(@Req() req) {
     return this.authService.removeAccount(req.user.userId);
   }
