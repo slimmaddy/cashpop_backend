@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Relationship, RelationshipStatus } from '../entities/relationship.entity';
 import { User } from '../../users/entities/user.entity';
 import { UsersService } from '../../users/users.service';
+import { UserContextService } from './user-context.service';
 import {
   RelationshipResponseDto,
   GetFriendsDto,
@@ -22,6 +23,7 @@ export class RelationshipService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private usersService: UsersService,
+    private userContextService: UserContextService,
   ) {}
 
   /**
@@ -71,30 +73,30 @@ export class RelationshipService {
     console.log('- total:', total);
     console.log('- sample relationship:', relationships[0]);
 
-    // Transform data thành format cần thiết cho frontend
-    const friends: RelationshipResponseDto[] = await Promise.all(
-      relationships.map(async (relationship) => {
-        // Lấy thông tin friend từ email
-        const friendUser = await this.usersService.findByEmail(relationship.friendEmail);
-        console.log(`- Finding friend: ${relationship.friendEmail} -> ${friendUser ? 'Found' : 'Not found'}`);
+    // ✅ OPTIMIZED: Batch load friend users để tránh N+1 queries
+    const friendEmails = relationships.map(r => r.friendEmail);
+    const friendUsersMap = await this.userContextService.getUsersByEmails(friendEmails);
 
-        return {
-          id: relationship.id,
-          friend: {
-            id: friendUser?.id || '',
-            email: relationship.friendEmail,        // ✅ Email từ relationship
-            username: friendUser?.username || '',   // ✅ Username từ user
-            name: friendUser?.name || '',           // ✅ Tên từ user
-            avatar: friendUser?.avatar || null,     // ✅ Avatar từ user
-          },
-          status: relationship.status,
-          initiatedBy: relationship.initiatedBy,
-          message: relationship.message,
-          createdAt: relationship.createdAt,
-          acceptedAt: relationship.acceptedAt,
-        };
-      })
-    );
+    // Transform data thành format cần thiết cho frontend
+    const friends: RelationshipResponseDto[] = relationships.map((relationship) => {
+      const friendUser = friendUsersMap.get(relationship.friendEmail);
+
+      return {
+        id: relationship.id,
+        friend: {
+          id: friendUser?.id || '',
+          email: relationship.friendEmail,
+          username: friendUser?.username || '',
+          name: friendUser?.name || '',
+          avatar: friendUser?.avatar || null,
+        },
+        status: relationship.status,
+        initiatedBy: relationship.initiatedBy,
+        message: relationship.message,
+        createdAt: relationship.createdAt,
+        acceptedAt: relationship.acceptedAt,
+      };
+    });
 
     return { friends, total };
   }
@@ -218,9 +220,9 @@ export class RelationshipService {
   }
 
   /**
-   * Kiểm tra mối quan hệ đã tồn tại
+   * Kiểm tra mối quan hệ đã tồn tại (public method để các service khác sử dụng)
    */
-  private async checkExistingRelationship(
+  async checkExistingRelationship(
     userEmail: string,
     friendEmail: string
   ): Promise<Relationship | null> {
@@ -229,6 +231,100 @@ export class RelationshipService {
         { userEmail, friendEmail },
       ],
     });
+  }
+
+  /**
+   * Kiểm tra mối quan hệ bidirectional (cả 2 chiều)
+   */
+  async checkBidirectionalRelationship(
+    userEmail: string,
+    friendEmail: string
+  ): Promise<{ primary: Relationship | null; reverse: Relationship | null }> {
+    const [primary, reverse] = await Promise.all([
+      this.relationshipRepository.findOne({
+        where: { userEmail, friendEmail }
+      }),
+      this.relationshipRepository.findOne({
+        where: { userEmail: friendEmail, friendEmail: userEmail }
+      })
+    ]);
+
+    return { primary, reverse };
+  }
+
+  /**
+   * Tạo friendship tự động chấp nhận (dùng cho sync)
+   */
+  async createAutoAcceptedFriendship(
+    userEmail: string,
+    friendEmail: string,
+    message: string
+  ): Promise<{ created: boolean; message: string; relationship?: Relationship }> {
+
+    // Kiểm tra relationship đã tồn tại
+    const { primary, reverse } = await this.checkBidirectionalRelationship(userEmail, friendEmail);
+
+    // Nếu đã là bạn
+    if (primary?.status === RelationshipStatus.ACCEPTED || reverse?.status === RelationshipStatus.ACCEPTED) {
+      return { created: false, message: 'Already friends' };
+    }
+
+    // Nếu có pending request
+    if (primary?.status === RelationshipStatus.PENDING ||
+        primary?.status === RelationshipStatus.RECEIVED ||
+        reverse?.status === RelationshipStatus.PENDING ||
+        reverse?.status === RelationshipStatus.RECEIVED) {
+      return { created: false, message: 'Pending request exists' };
+    }
+
+    const now = new Date();
+
+    // Tạo hoặc cập nhật primary relationship
+    let primaryRelationship: Relationship;
+    if (primary) {
+      primary.status = RelationshipStatus.ACCEPTED;
+      primary.initiatedBy = userEmail;
+      primary.message = message;
+      primary.acceptedAt = now;
+      primary.blockedAt = null;
+      primaryRelationship = await this.relationshipRepository.save(primary);
+    } else {
+      primaryRelationship = this.relationshipRepository.create({
+        userEmail,
+        friendEmail,
+        status: RelationshipStatus.ACCEPTED,
+        initiatedBy: userEmail,
+        message,
+        acceptedAt: now
+      });
+      primaryRelationship = await this.relationshipRepository.save(primaryRelationship);
+    }
+
+    // Tạo hoặc cập nhật reverse relationship
+    if (reverse) {
+      reverse.status = RelationshipStatus.ACCEPTED;
+      reverse.initiatedBy = userEmail;
+      reverse.message = message;
+      reverse.acceptedAt = now;
+      reverse.blockedAt = null;
+      await this.relationshipRepository.save(reverse);
+    } else {
+      const reverseRelationship = this.relationshipRepository.create({
+        userEmail: friendEmail,
+        friendEmail: userEmail,
+        status: RelationshipStatus.ACCEPTED,
+        initiatedBy: userEmail,
+        message,
+        acceptedAt: now
+      });
+      await this.relationshipRepository.save(reverseRelationship);
+    }
+
+    return {
+      created: true,
+      message: 'Friendship created successfully',
+      relationship: primaryRelationship
+    };
   }
   
   /**
@@ -259,29 +355,29 @@ export class RelationshipService {
     console.log('- requests found:', relationships.length);
     console.log('- total:', total);
 
-    // Transform data thành format cần thiết cho frontend
-    const requests: FriendRequestDto[] = await Promise.all(
-      relationships.map(async (relationship) => {
-        // Lấy thông tin sender từ email
-        const senderUser = await this.usersService.findByEmail(relationship.userEmail);
-        console.log(`- Finding sender: ${relationship.userEmail} -> ${senderUser ? 'Found' : 'Not found'}`);
+    // ✅ OPTIMIZED: Batch load sender users để tránh N+1 queries
+    const senderEmails = relationships.map(r => r.userEmail);
+    const senderUsersMap = await this.userContextService.getUsersByEmails(senderEmails);
 
-        return {
-          id: relationship.id,
-          sender: {
-            id: senderUser?.id || '',
-            email: relationship.userEmail,
-            username: senderUser?.username || '',
-            name: senderUser?.name || '',
-            avatar: senderUser?.avatar || null,
-          },
-          message: relationship.message,
-          createdAt: relationship.createdAt,
-          canAccept: true,
-          canReject: true,
-        };
-      })
-    );
+    // Transform data thành format cần thiết cho frontend
+    const requests: FriendRequestDto[] = relationships.map((relationship) => {
+      const senderUser = senderUsersMap.get(relationship.userEmail);
+
+      return {
+        id: relationship.id,
+        sender: {
+          id: senderUser?.id || '',
+          email: relationship.userEmail,
+          username: senderUser?.username || '',
+          name: senderUser?.name || '',
+          avatar: senderUser?.avatar || null,
+        },
+        message: relationship.message,
+        createdAt: relationship.createdAt,
+        canAccept: true,
+        canReject: true,
+      };
+    });
 
     return { requests, total };
   }

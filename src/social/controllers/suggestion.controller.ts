@@ -11,9 +11,11 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
-} from '@nestjs/swagger';   
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SuggestionService } from '../services/suggestion.service';
+import { UserContextService } from '../services/user-context.service';
+import { BaseSocialController } from './base-social.controller';
 import {
   SuggestionResponseDto,
   GetSuggestionsDto,
@@ -23,8 +25,13 @@ import {
 @ApiBearerAuth()
 @Controller('social/suggestions')
 @UseGuards(JwtAuthGuard)
-export class SuggestionController {
-  constructor(private readonly suggestionService: SuggestionService) {}
+export class SuggestionController extends BaseSocialController {
+  constructor(
+    private readonly suggestionService: SuggestionService,
+    userContextService: UserContextService,
+  ) {
+    super(userContextService);
+  }
 
   @Get()
   @ApiOperation({
@@ -56,7 +63,15 @@ export class SuggestionController {
     @Req() req: any,
     @Query() query: GetSuggestionsDto
   ): Promise<{ suggestions: SuggestionResponseDto[]; total: number }> {
-    return this.suggestionService.getSuggestions(req.user.email, query);
+    this.logRequest('getSuggestions', req, { query });
+
+    // ✅ OPTIMIZED: Sử dụng BaseSocialController với proper user validation
+    const { user } = await this.getUserFromRequest(req);
+    if (!user) {
+      return this.createUserNotFoundResponse({ suggestions: [], total: 0 });
+    }
+
+    return this.suggestionService.getSuggestions(user.email, query);
   }
 
   

@@ -5,6 +5,7 @@ import { Relationship, RelationshipStatus } from '../entities/relationship.entit
 import { Suggestion, SuggestionStatus, SuggestionSource } from '../entities/suggestion.entity';
 import { User } from '../../users/entities/user.entity';
 import { UsersService } from '../../users/users.service';
+import { UserLookupService } from './user-lookup.service';
 
 import {
   SuggestionResponseDto,
@@ -18,9 +19,8 @@ export class SuggestionService {
     private relationshipRepository: Repository<Relationship>,
     @InjectRepository(Suggestion)
     private suggestionRepository: Repository<Suggestion>,
-    @InjectRepository(User)
-    private userRepository: Repository<User>,
     private usersService: UsersService,
+    private userLookupService: UserLookupService,
   ) {}
   /**
    * Lấy danh sách gợi ý kết bạn từ bảng suggestions
@@ -107,10 +107,113 @@ export class SuggestionService {
   }
 
   /**
-   * Tìm user theo email (sử dụng lại method từ UsersService)
+   * Tạo suggestions từ danh sách contacts (dùng cho sync)
+   */
+  async createSuggestionsFromContacts(
+    userEmail: string,
+    contacts: any[]
+  ): Promise<{ created: number; skipped: number }> {
+    const emails = contacts
+      .filter(contact => contact.email && this.userLookupService.isValidEmail(contact.email))
+      .map(contact => contact.email);
+
+    if (emails.length === 0) {
+      return { created: 0, skipped: 0 };
+    }
+
+    // Tìm CashPop users từ contacts
+    const cashpopUsers = await this.userLookupService.findCashpopUsersByEmails(emails);
+
+    let created = 0;
+    let skipped = 0;
+
+    for (const user of cashpopUsers) {
+      // Skip self
+      if (user.email === userEmail) {
+        skipped++;
+        continue;
+      }
+
+      // Kiểm tra đã có relationship chưa
+      const existingRelationship = await this.relationshipRepository.findOne({
+        where: [
+          { userEmail, friendEmail: user.email },
+          { userEmail: user.email, friendEmail: userEmail }
+        ]
+      });
+
+      if (existingRelationship) {
+        skipped++;
+        continue;
+      }
+
+      // Kiểm tra đã có suggestion chưa
+      const existingSuggestion = await this.suggestionRepository.findOne({
+        where: {
+          userEmail,
+          suggestedUserEmail: user.email,
+          status: SuggestionStatus.ACTIVE
+        }
+      });
+
+      if (existingSuggestion) {
+        skipped++;
+        continue;
+      }
+
+      // Tạo suggestion mới
+      try {
+        const mutualFriendsCount = await this.getMutualFriendsCount(userEmail, user.email);
+
+        const suggestion = this.suggestionRepository.create({
+          userEmail,
+          suggestedUserEmail: user.email,
+          source: SuggestionSource.CONTACT,
+          status: SuggestionStatus.ACTIVE,
+          reason: 'Found in your contacts',
+          mutualFriendsCount,
+          metadata: {
+            source_info: 'contact_sync',
+            contact_name: contacts.find(c => c.email === user.email)?.name || user.name
+          }
+        });
+
+        await this.suggestionRepository.save(suggestion);
+        created++;
+      } catch (error) {
+        console.error(`Error creating suggestion for ${user.email}:`, error);
+        skipped++;
+      }
+    }
+
+    return { created, skipped };
+  }
+
+  /**
+   * Đếm số bạn chung giữa 2 users
+   */
+  private async getMutualFriendsCount(userEmail: string, suggestedUserEmail: string): Promise<number> {
+    const mutualFriendsQuery = `
+      SELECT COUNT(DISTINCT r1.friend_email) as mutual_count
+      FROM relationships r1
+      INNER JOIN relationships r2 ON r1.friend_email = r2.friend_email
+      WHERE r1.user_email = $1
+        AND r2.user_email = $2
+        AND r1.status = 'accepted'
+        AND r2.status = 'accepted'
+        AND r1.friend_email != $1
+        AND r1.friend_email != $2
+    `;
+
+    const result = await this.relationshipRepository.query(mutualFriendsQuery, [userEmail, suggestedUserEmail]);
+    return parseInt(result[0]?.mutual_count || '0');
+  }
+
+  /**
+   * Tìm user theo email (sử dụng UserLookupService)
    */
   async findUserByEmail(email: string): Promise<User | null> {
-    return await this.usersService.findByEmail(email);
+    return await this.userLookupService.getUserByEmail(email);
   }
 
   /**

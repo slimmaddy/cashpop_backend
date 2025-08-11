@@ -17,7 +17,8 @@ import {
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RelationshipService } from '../services/relationship.service';
-import { UsersService } from '../../users/users.service';
+import { UserContextService } from '../services/user-context.service';
+import { BaseSocialController } from './base-social.controller';
 import {
   RelationshipResponseDto,
   GetFriendsDto,
@@ -32,11 +33,13 @@ import {
 @Controller('social/friends')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
-export class RelationshipController {
+export class RelationshipController extends BaseSocialController {
   constructor(
     private readonly relationshipService: RelationshipService,
-    private readonly usersService: UsersService
-  ) {}
+    userContextService: UserContextService,
+  ) {
+    super(userContextService);
+  }
 
   @Get()
   @ApiOperation({
@@ -69,19 +72,13 @@ export class RelationshipController {
     @Req() req: any,
     @Query() query: GetFriendsDto
   ): Promise<{ friends: RelationshipResponseDto[]; total: number }> {
-    console.log('🔍 Controller getFriends:');
-    console.log('- req.user:', req.user);
-    console.log('- req.user.userId:', req.user?.userId);
-    console.log('- query:', query);
+    this.logRequest('getFriends', req, { query });
 
-    // Lấy user từ database bằng userId
-    const user = await this.usersService.findById(req.user.userId);
+    // ✅ OPTIMIZED: Sử dụng BaseSocialController
+    const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      console.log('❌ User not found with userId:', req.user.userId);
-      return { friends: [], total: 0 };
+      return this.createUserNotFoundResponse({ friends: [], total: 0 });
     }
-
-    console.log('✅ Found user:', { id: user.id, email: user.email, username: user.username });
 
     return this.relationshipService.getFriends(user.email, query);
   }
@@ -116,18 +113,13 @@ export class RelationshipController {
     @Req() req: any,
     @Body() sendFriendRequestDto: SendFriendRequestDto
   ): Promise<SendFriendRequestResponseDto> {
-    console.log('🚀 Controller sendFriendRequest:');
-    console.log('- req.user:', req.user);
-    console.log('- sendFriendRequestDto:', sendFriendRequestDto);
+    this.logRequest('sendFriendRequest', req, { sendFriendRequestDto });
 
-    // Take user from database with userid
-    const user = await this.usersService.findById(req.user.userId);
+    // ✅ OPTIMIZED: Sử dụng BaseSocialController
+    const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      console.log('❌ User not found with userId:', req.user.userId);
       throw new Error('Không tìm thấy thông tin người dùng');
     }
-
-    console.log('✅ Found user:', { id: user.id, email: user.email, username: user.username });
 
     return this.relationshipService.sendFriendRequest(user.email, sendFriendRequestDto);
   }
@@ -171,18 +163,13 @@ export class RelationshipController {
     @Req() req: any,
     @Query() query: GetFriendRequestsDto
   ): Promise<{ requests: FriendRequestDto[]; total: number }> {
-    console.log('🔍 Controller getFriendRequests:');
-    console.log('- req.user:', req.user);
-    console.log('- query:', query);
+    this.logRequest('getFriendRequests', req, { query });
 
-    // Take user from database with userid
-    const user = await this.usersService.findById(req.user.userId);
+    // ✅ OPTIMIZED: Sử dụng BaseSocialController
+    const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      console.log('❌ User not found with userId:', req.user.userId);
-      return { requests: [], total: 0 };
+      return this.createUserNotFoundResponse({ requests: [], total: 0 });
     }
-
-    console.log('✅ Found user:', { id: user.id, email: user.email, username: user.username });
 
     return this.relationshipService.getFriendRequests(user.email, query);
   }
@@ -209,18 +196,13 @@ export class RelationshipController {
     @Req() req: any,
     @Param('requestId') requestId: string
   ): Promise<FriendRequestActionResponseDto> {
-    console.log('🚀 Controller acceptFriendRequest:');
-    console.log('- req.user:', req.user);
-    console.log('- requestId:', requestId);
+    this.logRequest('acceptFriendRequest', req, { requestId });
 
-    // Lấy user từ database bằng userId
-    const user = await this.usersService.findById(req.user.userId);
+    // ✅ OPTIMIZED: Sử dụng BaseSocialController
+    const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      console.log('❌ User not found with userId:', req.user.userId);
       throw new Error('Không tìm thấy thông tin người dùng');
     }
-
-    console.log('✅ Found user:', { id: user.id, email: user.email, username: user.username });
 
     return this.relationshipService.acceptFriendRequest(user.email, requestId);
   }
@@ -247,18 +229,13 @@ export class RelationshipController {
     @Req() req: any,
     @Param('requestId') requestId: string
   ): Promise<FriendRequestActionResponseDto> {
-    console.log('🚀 Controller rejectFriendRequest:');
-    console.log('- req.user:', req.user);
-    console.log('- requestId:', requestId);
+    this.logRequest('rejectFriendRequest', req, { requestId });
 
-    // Lấy user từ database bằng userId
-    const user = await this.usersService.findById(req.user.userId);
+    // ✅ OPTIMIZED: Sử dụng BaseSocialController
+    const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      console.log('❌ User not found with userId:', req.user.userId);
       throw new Error('Không tìm thấy thông tin người dùng');
     }
-
-    console.log('✅ Found user:', { id: user.id, email: user.email, username: user.username });
 
     return this.relationshipService.rejectFriendRequest(user.email, requestId);
   }
