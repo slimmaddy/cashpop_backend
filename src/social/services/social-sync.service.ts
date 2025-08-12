@@ -10,6 +10,7 @@ import {
   SyncPlatform
 } from '../dto/syncing.dto';
 import { FacebookSyncService } from './syncing-facebook.service';
+import { LineSyncService } from './syncing-line.service';
 import { RelationshipService } from './relationship.service';
 import { UserLookupService } from './user-lookup.service';
 import { SuggestionService } from './suggestion.service';
@@ -22,6 +23,7 @@ export class SocialSyncService {
     @InjectRepository(Relationship)
     private readonly relationshipRepository: Repository<Relationship>,
     private readonly facebookSyncService: FacebookSyncService,
+    private readonly lineSyncService: LineSyncService,
     private readonly relationshipService: RelationshipService,
     private readonly userLookupService: UserLookupService,
     private readonly suggestionService: SuggestionService,
@@ -49,7 +51,11 @@ export class SocialSyncService {
           break;
 
         case SyncPlatform.LINE:
-          throw new BadRequestException('LINE sync chưa được hỗ trợ');
+          if (!syncDto.line?.token) {
+            throw new BadRequestException('LINE access token is required');
+          }
+          contacts = await this.lineSyncService.getContacts(syncDto.line.token);
+          break;
 
         case SyncPlatform.CONTACT:
           throw new BadRequestException('Phone contact sync chưa được hỗ trợ');
@@ -72,7 +78,7 @@ export class SocialSyncService {
         errorMessage: error.message,
         errorType: error.constructor.name,
         platform: syncDto.platform,
-        hasToken: !!syncDto.facebook?.token
+        hasToken: !!(syncDto.facebook?.token || syncDto.line?.token)
       });
 
       return {
@@ -190,8 +196,11 @@ export class SocialSyncService {
         case SyncPlatform.FACEBOOK:
           contacts = await this.facebookSyncService.getMockContacts();
           break;
+        case SyncPlatform.LINE:
+          contacts = await this.lineSyncService.getMockContacts();
+          break;
         default:
-          throw new BadRequestException('Test chỉ hỗ trợ Facebook platform');
+          throw new BadRequestException('Test chỉ hỗ trợ Facebook và LINE platform');
       }
 
       const result = await this.processContacts(userEmail, contacts, platform);

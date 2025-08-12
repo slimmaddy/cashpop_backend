@@ -45,3 +45,13 @@ simple-dummy-data.sql
 create-suggestion-test-data.sql
 create-relationships-data.sql
 create-friend-suggestion-test-data.sql
+
+#testing-plan 
+friend-request-api-testing-plan.md
+friend-suggestion-testing-plan.md
+social-sync-api-testing-plan.md
+test-line-login.js
+test-line-token.js
+test-line-with-id-token.js
+create-line-sync-test-data.sql
+generate-line-auth-url.js

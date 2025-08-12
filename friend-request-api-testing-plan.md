@@ -15,37 +15,41 @@ Run the following SQL to create test users and scenarios:
 
 ```sql
 -- Create test users for friend request testing
-INSERT INTO users (id, email, username, name, avatar, provider) VALUES 
+INSERT INTO users (id, email, username, name, avatar, provider) VALUES
 -- Main test user (sender/receiver)
-('req-user-1', 'requester@example.com', 'requester', 'Request Test User', 'https://i.pravatar.cc/150?img=60', 'local'),
+('a342fd9b-0da5-43f2-8063-ae74bdf6059a', 'requester@example.com', 'requester', 'Request Test User', 'https://i.pravatar.cc/150?img=60', 'local'),
 
 -- Target users for sending requests
-('req-target-1', 'target1@example.com', 'target1', 'Target User 1', 'https://i.pravatar.cc/150?img=61', 'local'),
-('req-target-2', 'target2@example.com', 'target2', 'Target User 2', 'https://i.pravatar.cc/150?img=62', 'local'),
-('req-target-3', 'target3@example.com', 'target3', 'Target User 3', 'https://i.pravatar.cc/150?img=63', 'local'),
+('b342fd9b-0da5-43f2-8063-ae74bdf6059b', 'target1@example.com', 'target1', 'Target User 1', 'https://i.pravatar.cc/150?img=61', 'local'),
+('c342fd9b-0da5-43f2-8063-ae74bdf6059c', 'target2@example.com', 'target2', 'Target User 2', 'https://i.pravatar.cc/150?img=62', 'local'),
+('d342fd9b-0da5-43f2-8063-ae74bdf6059d', 'target3@example.com', 'target3', 'Target User 3', 'https://i.pravatar.cc/150?img=63', 'local'),
 
 -- Users who will send requests to main user
-('req-sender-1', 'sender1@example.com', 'sender1', 'Sender User 1', 'https://i.pravatar.cc/150?img=64', 'local'),
-('req-sender-2', 'sender2@example.com', 'sender2', 'Sender User 2', 'https://i.pravatar.cc/150?img=65', 'local'),
+('e342fd9b-0da5-43f2-8063-ae74bdf6059e', 'sender1@example.com', 'sender1', 'Sender User 1', 'https://i.pravatar.cc/150?img=64', 'local'),
+('f342fd9b-0da5-43f2-8063-ae74bdf6059f', 'sender2@example.com', 'sender2', 'Sender User 2', 'https://i.pravatar.cc/150?img=65', 'local'),
 
 -- Already friends user
-('req-friend-1', 'existing.friend@example.com', 'existing_friend', 'Existing Friend', 'https://i.pravatar.cc/150?img=66', 'local')
+('1342fd9b-0da5-43f2-8063-ae74bdf60591', 'existing.friend@example.com', 'existing_friend', 'Existing Friend', 'https://i.pravatar.cc/150?img=66', 'local')
 ON CONFLICT (id) DO NOTHING;
 
--- Create existing friendship
-INSERT INTO relationships (id, user_email, friend_email, status, initiated_by, accepted_at) VALUES 
-(gen_random_uuid(), 'requester@example.com', 'existing.friend@example.com', 'accepted', 'requester@example.com', NOW())
+-- Create existing friendship (bidirectional)
+INSERT INTO relationships (id, user_email, friend_email, status, initiated_by, accepted_at, created_at, updated_at) VALUES
+(gen_random_uuid(), 'requester@example.com', 'existing.friend@example.com', 'accepted', 'requester@example.com', NOW(), NOW(), NOW()),
+(gen_random_uuid(), 'existing.friend@example.com', 'requester@example.com', 'accepted', 'requester@example.com', NOW(), NOW(), NOW())
 ON CONFLICT (user_email, friend_email) DO NOTHING;
 
 -- Create pending requests TO main user (for testing received requests)
-INSERT INTO relationships (id, user_email, friend_email, status, initiated_by, message, created_at) VALUES 
-(gen_random_uuid(), 'sender1@example.com', 'requester@example.com', 'pending', 'sender1@example.com', 'Hi! Let''s be friends!', NOW() - INTERVAL '1 day'),
-(gen_random_uuid(), 'sender2@example.com', 'requester@example.com', 'pending', 'sender2@example.com', 'Would you like to connect?', NOW() - INTERVAL '2 hours')
+-- Note: The API looks for status='pending' where friend_email=current_user
+INSERT INTO relationships (id, user_email, friend_email, status, initiated_by, message, created_at, updated_at) VALUES
+-- These are the requests that will show up in "received requests" API
+(gen_random_uuid(), 'sender1@example.com', 'requester@example.com', 'pending', 'sender1@example.com', 'Hi! Let''s be friends!', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day'),
+(gen_random_uuid(), 'sender2@example.com', 'requester@example.com', 'pending', 'sender2@example.com', 'Would you like to connect?', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours')
 ON CONFLICT (user_email, friend_email) DO NOTHING;
 
 -- Create rejected relationship (for testing duplicate prevention)
-INSERT INTO relationships (id, user_email, friend_email, status, initiated_by, created_at) VALUES 
-(gen_random_uuid(), 'requester@example.com', 'target3@example.com', 'rejected', 'requester@example.com', NOW() - INTERVAL '1 week')
+INSERT INTO relationships (id, user_email, friend_email, status, initiated_by, created_at, updated_at) VALUES
+(gen_random_uuid(), 'requester@example.com', 'target3@example.com', 'rejected', 'requester@example.com', NOW() - INTERVAL '1 week', NOW() - INTERVAL '1 week'),
+(gen_random_uuid(), 'target3@example.com', 'requester@example.com', 'rejected', 'requester@example.com', NOW() - INTERVAL '1 week', NOW() - INTERVAL '1 week')
 ON CONFLICT (user_email, friend_email) DO NOTHING;
 ```
 
@@ -65,7 +69,7 @@ ON CONFLICT (user_email, friend_email) DO NOTHING;
 ```json
 {
   "user": {
-    "id": "req-user-1",
+    "id": "a342fd9b-0da5-43f2-8063-ae74bdf6059a",
     "username": "requester@example.com",
     "email": "requester@example.com",
     "name": "Request Test User"
@@ -98,11 +102,11 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Gửi lời mời kết bạn thành công",
+  "message": "Lời mời kết bạn đã được gửi thành công",
   "relationship": {
     "id": "relationship-uuid",
     "friend": {
-      "id": "req-target-1",
+      "id": "b342fd9b-0da5-43f2-8063-ae74bdf6059b",
       "email": "target1@example.com",
       "username": "target1",
       "name": "Target User 1",
@@ -111,7 +115,8 @@ Content-Type: application/json
     "status": "pending",
     "initiatedBy": "requester@example.com",
     "message": "Hi! I'd like to connect with you on CashPop.",
-    "createdAt": "2025-01-11T10:30:00.000Z"
+    "createdAt": "2025-01-11T10:30:00.000Z",
+    "acceptedAt": null
   }
 }
 ```
@@ -143,11 +148,11 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "message": "Gửi lời mời kết bạn thành công",
+  "message": "Lời mời kết bạn đã được gửi thành công",
   "relationship": {
     "id": "relationship-uuid",
     "friend": {
-      "id": "req-target-2",
+      "id": "c342fd9b-0da5-43f2-8063-ae74bdf6059c",
       "email": "target2@example.com",
       "username": "target2",
       "name": "Target User 2",
@@ -156,7 +161,8 @@ Content-Type: application/json
     "status": "pending",
     "initiatedBy": "requester@example.com",
     "message": null,
-    "createdAt": "2025-01-11T10:35:00.000Z"
+    "createdAt": "2025-01-11T10:35:00.000Z",
+    "acceptedAt": null
   }
 }
 ```
@@ -225,7 +231,7 @@ Content-Type: application/json
 - Response status: 400
 - Clear validation error message
 
-### Test Case 5: Send Friend Request to Existing Friend
+### Test Case 5: Send Friend Request to Existing Friend 
 **Purpose:** Verify duplicate prevention for existing friendships
 
 **Endpoint:** `POST /social/friends/request`
@@ -246,13 +252,43 @@ Content-Type: application/json
 ```json
 {
   "statusCode": 409,
-  "message": "Bạn đã là bạn bè với người dùng này rồi"
+  "message": "Bạn đã là bạn bè với người này rồi"
 }
 ```
 
 **Verification Points:**
 - Response status: 409
 - Clear conflict message about existing friendship
+
+### Test Case 5a: Send Duplicate Friend Request
+**Purpose:** Verify duplicate prevention for pending requests
+
+**Endpoint:** `POST /social/friends/request`
+**Headers:**
+```
+Authorization: Bearer {your_access_token}
+Content-Type: application/json
+```
+**Request Body:**
+```json
+{
+  "friendEmail": "target1@example.com",
+  "message": "Sending again!"
+}
+```
+**Note:** This assumes you already sent a request to target1@example.com in Test Case 1
+
+**Expected Response:**
+```json
+{
+  "statusCode": 409,
+  "message": "Lời mời kết bạn đã được gửi trước đó"
+}
+```
+
+**Verification Points:**
+- Response status: 409
+- Clear conflict message about duplicate request
 
 ### Test Case 6: Get Received Friend Requests
 **Purpose:** Verify retrieving pending friend requests
@@ -270,7 +306,7 @@ Authorization: Bearer {your_access_token}
     {
       "id": "relationship-uuid-1",
       "sender": {
-        "id": "req-sender-2",
+        "id": "f342fd9b-0da5-43f2-8063-ae74bdf6059f",
         "email": "sender2@example.com",
         "username": "sender2",
         "name": "Sender User 2",
@@ -284,7 +320,7 @@ Authorization: Bearer {your_access_token}
     {
       "id": "relationship-uuid-2",
       "sender": {
-        "id": "req-sender-1",
+        "id": "e342fd9b-0da5-43f2-8063-ae74bdf6059e",
         "email": "sender1@example.com",
         "username": "sender1",
         "name": "Sender User 1",
@@ -302,10 +338,12 @@ Authorization: Bearer {your_access_token}
 
 **Verification Points:**
 - Response status: 200
-- `requests` array contains pending requests
-- Requests ordered by most recent first
+- `requests` array contains requests where current user is the receiver (friendEmail = current user)
+- Requests ordered by most recent first (createdAt DESC)
 - Each request has sender info and action flags
 - `total` count matches array length
+- Only shows relationships with status = 'pending' where friendEmail = current user
+- API queries: `WHERE friendEmail = userEmail AND status = 'pending'`
 
 ### Test Case 7: Get Received Friend Requests with Pagination
 **Purpose:** Verify pagination works for friend requests
@@ -323,7 +361,7 @@ Authorization: Bearer {your_access_token}
     {
       "id": "relationship-uuid-1",
       "sender": {
-        "id": "req-sender-2",
+        "id": "f342fd9b-0da5-43f2-8063-ae74bdf6059f",
         "email": "sender2@example.com",
         "username": "sender2",
         "name": "Sender User 2",
@@ -359,11 +397,11 @@ Authorization: Bearer {your_access_token}
 ```json
 {
   "success": true,
-  "message": "Chấp nhận lời mời kết bạn thành công",
+  "message": "Đã chấp nhận lời mời kết bạn",
   "relationship": {
     "id": "relationship-uuid",
     "friend": {
-      "id": "req-sender-1",
+      "id": "e342fd9b-0da5-43f2-8063-ae74bdf6059e",
       "email": "sender1@example.com",
       "username": "sender1",
       "name": "Sender User 1",
@@ -374,8 +412,7 @@ Authorization: Bearer {your_access_token}
     "message": "Hi! Let's be friends!",
     "createdAt": "2025-01-10T10:30:00.000Z",
     "acceptedAt": "2025-01-11T10:45:00.000Z"
-  },
-  "requestId": "relationship-uuid"
+  }
 }
 ```
 
@@ -384,7 +421,8 @@ Authorization: Bearer {your_access_token}
 - `success` is true
 - `status` changed to "accepted"
 - `acceptedAt` timestamp is set
-- Bidirectional friendship created
+- Bidirectional friendship created (both relationships updated to 'accepted')
+- No `requestId` field in response (not included in actual implementation)
 
 ### Test Case 9: Reject Friend Request
 **Purpose:** Verify rejecting a pending friend request
@@ -400,21 +438,7 @@ Authorization: Bearer {your_access_token}
 ```json
 {
   "success": true,
-  "message": "Từ chối lời mời kết bạn thành công",
-  "relationship": {
-    "id": "relationship-uuid",
-    "friend": {
-      "id": "req-sender-2",
-      "email": "sender2@example.com",
-      "username": "sender2",
-      "name": "Sender User 2",
-      "avatar": "https://i.pravatar.cc/150?img=65"
-    },
-    "status": "rejected",
-    "initiatedBy": "sender2@example.com",
-    "message": "Would you like to connect?",
-    "createdAt": "2025-01-11T08:30:00.000Z"
-  },
+  "message": "Đã từ chối lời mời kết bạn",
   "requestId": "relationship-uuid"
 }
 ```
@@ -422,7 +446,8 @@ Authorization: Bearer {your_access_token}
 **Verification Points:**
 - Response status: 200
 - `success` is true
-- `status` changed to "rejected"
+- Only returns `requestId` (no relationship object in reject response)
+- Both bidirectional relationships updated to 'rejected' status
 - No friendship created
 
 ### Test Case 10: Accept Non-Existent Request
@@ -501,11 +526,11 @@ Authorization: Bearer invalid_token
 Run these SQL queries to verify friend request operations:
 
 ```sql
--- Check pending requests TO main user
+-- Check pending requests TO main user (what user sees in "received requests")
 SELECT 'Received Requests' as type, r.*, u.name as sender_name
 FROM relationships r
 JOIN users u ON r.user_email = u.email
-WHERE r.friend_email = 'requester@example.com' 
+WHERE r.friend_email = 'requester@example.com'
   AND r.status = 'pending'
 ORDER BY r.created_at DESC;
 
@@ -513,17 +538,31 @@ ORDER BY r.created_at DESC;
 SELECT 'Sent Requests' as type, r.*, u.name as target_name
 FROM relationships r
 JOIN users u ON r.friend_email = u.email
-WHERE r.user_email = 'requester@example.com' 
+WHERE r.user_email = 'requester@example.com'
   AND r.status = 'pending'
 ORDER BY r.created_at DESC;
 
--- Check accepted friendships
+-- Check accepted friendships (bidirectional)
 SELECT 'Accepted Friends' as type, r.*, u.name as friend_name
 FROM relationships r
 JOIN users u ON r.friend_email = u.email
-WHERE r.user_email = 'requester@example.com' 
+WHERE r.user_email = 'requester@example.com'
   AND r.status = 'accepted'
 ORDER BY r.accepted_at DESC;
+
+-- Check all relationships for debugging (shows bidirectional nature)
+SELECT
+  'All Relationships' as type,
+  r.user_email,
+  r.friend_email,
+  r.status,
+  r.initiated_by,
+  r.created_at,
+  r.accepted_at
+FROM relationships r
+WHERE r.user_email = 'requester@example.com'
+   OR r.friend_email = 'requester@example.com'
+ORDER BY r.created_at DESC;
 ```
 
 ## Troubleshooting
@@ -540,9 +579,14 @@ ORDER BY r.accepted_at DESC;
 3. Verify request IDs: `SELECT id, status FROM relationships WHERE friend_email = 'requester@example.com' AND status = 'pending'`
 
 ## Notes
-- Friend requests create unidirectional relationships initially (status = pending)
-- Accepting a request creates bidirectional friendships automatically
-- Rejecting a request keeps the relationship record with status = rejected
-- Users cannot send multiple requests to the same person
-- All friend request operations are logged for debugging
-- Request IDs are UUIDs generated by the database
+- **Relationship Creation**: When sending a friend request, the system creates:
+  - Primary relationship: Sender -> Receiver (status = 'pending')
+  - Reverse relationship: Receiver -> Sender (status = 'received') - for bidirectional tracking
+- **Database Schema**: Uses snake_case column names (user_email, friend_email, initiated_by, accepted_at, created_at, updated_at)
+- **Status Values**: 'pending', 'accepted', 'rejected', 'blocked', 'received' (from RelationshipStatus enum)
+- **Received Requests API**: Queries `WHERE friendEmail = userEmail AND status = 'pending'`
+- **Accept/Reject**: Updates BOTH bidirectional relationships to maintain consistency
+- **Duplicate Prevention**: Checks existing relationships before creating new ones
+- **Request IDs**: UUIDs generated by PostgreSQL (gen_random_uuid())
+- **API Responses**: Match actual service implementation (message text, field names, structure)
+- **Bidirectional Updates**: Accept/reject operations update both relationship records to same status

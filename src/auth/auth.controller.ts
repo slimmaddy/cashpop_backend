@@ -165,7 +165,94 @@ export class AuthController {
     const { email, lineId, name } = req.user;
     return this.authService.lineLogin(email, lineId, name);
   }
-  
+
+  @Post("line/test")
+  @ApiOperation({
+    summary: "Test LINE access token",
+    description: "Simple test to check what your LINE token returns and troubleshoot email issues"
+  })
+  @ApiResponse({ status: 200, description: "Test results with recommendations" })
+  async testLineToken(@Body() body: { access_token: string }) {
+    const { access_token } = body;
+
+    if (!access_token) {
+      return {
+        success: false,
+        message: 'access_token is required in request body'
+      };
+    }
+
+    const axios = require('axios');
+    const results = {
+      success: true,
+      profile: null,
+      userinfo: null,
+      tokenInfo: null,
+      emailFound: false,
+      recommendations: []
+    };
+
+    try {
+      // Test profile endpoint
+      try {
+        const profileResponse = await axios.get('https://api.line.me/v2/profile', {
+          headers: { Authorization: `Bearer ${access_token}` }
+        });
+        results.profile = profileResponse.data;
+      } catch (error) {
+        results.profile = { error: error.response?.data || error.message };
+      }
+
+      // Test userinfo endpoint (this is where email should be)
+      try {
+        const userinfoResponse = await axios.get('https://api.line.me/oauth2/v2.1/userinfo', {
+          headers: { Authorization: `Bearer ${access_token}` }
+        });
+        results.userinfo = userinfoResponse.data;
+        if (userinfoResponse.data.email) {
+          results.emailFound = true;
+        }
+      } catch (error) {
+        results.userinfo = { error: error.response?.data || error.message };
+        if (error.response?.status === 403) {
+          results.recommendations.push('❌ OpenID Connect not enabled - Enable it in LINE Developers Console');
+        }
+      }
+
+      // Test token verification
+      try {
+        const verifyResponse = await axios.post('https://api.line.me/oauth2/v2.1/verify',
+          `access_token=${access_token}`,
+          { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+        results.tokenInfo = verifyResponse.data;
+
+        if (!verifyResponse.data.scope?.includes('email')) {
+          results.recommendations.push('❌ Missing email scope - Re-authorize with "email" scope');
+        }
+      } catch (error) {
+        results.tokenInfo = { error: error.response?.data || error.message };
+      }
+
+      // Add recommendations based on results
+      if (!results.emailFound) {
+        results.recommendations.push('⚠️ No email found in any endpoint');
+        results.recommendations.push('🔧 Check: 1) OpenID Connect enabled, 2) Email scope granted, 3) User has email in LINE account');
+      } else {
+        results.recommendations.push('✅ Email found! LINE login should work now');
+      }
+
+      return results;
+
+    } catch (error) {
+      return {
+        success: false,
+        message: 'Test failed',
+        error: error.message
+      };
+    }
+  }
+
 
   @UseGuards(JwtAuthGuard)
   @Get("profile")

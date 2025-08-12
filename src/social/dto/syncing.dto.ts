@@ -19,8 +19,8 @@ export class FacebookSyncDataDto{
 
 export class LineSyncDataDto{
     @ApiProperty({
-        description: 'Line access token from client',
-        example: 'EAABwzLixnjYBAO7ZC4...'
+        description: 'LINE access token from client',
+        example: 'U1234567890abcdef1234567890abcdef'
     })
     @IsString()
     @IsNotEmpty()
@@ -57,6 +57,7 @@ export class SyncContactDto {
 
     @ApiProperty({
         description: 'LINE sync data',
+        type: LineSyncDataDto,
         required: false
     })
     @ValidateIf(o => o.platform === SyncPlatform.LINE)

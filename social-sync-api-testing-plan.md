@@ -15,17 +15,23 @@ Run the following SQL to create test users for sync scenarios:
 
 ```sql
 -- Create test users for sync testing
-INSERT INTO users (id, email, username, name, avatar, provider) VALUES 
+INSERT INTO users (id, email, username, name, avatar, provider) VALUES
 -- Main sync user
-('sync-user-1', 'sync.test@example.com', 'sync_test', 'Sync Test User', 'https://i.pravatar.cc/150?img=50', 'local'),
+('a342fd9b-0da5-43f2-8063-ae74bdf60500', 'sync.test@example.com', 'sync_test', 'Sync Test User', 'https://i.pravatar.cc/150?img=50', 'local'),
 
 -- Users that will be found in contacts (existing CashPop users)
-('sync-contact-1', 'alice.sync@example.com', 'alice_sync', 'Alice Sync', 'https://i.pravatar.cc/150?img=51', 'local'),
-('sync-contact-2', 'bob.sync@example.com', 'bob_sync', 'Bob Sync', 'https://i.pravatar.cc/150?img=52', 'local'),
-('sync-contact-3', 'carol.sync@example.com', 'carol_sync', 'Carol Sync', 'https://i.pravatar.cc/150?img=53', 'local'),
+('b342fd9b-0da5-43f2-8063-ae74bdf60501', 'alice.sync@example.com', 'alice_sync', 'Alice Sync', 'https://i.pravatar.cc/150?img=51', 'local'),
+('c342fd9b-0da5-43f2-8063-ae74bdf60502', 'bob.sync@example.com', 'bob_sync', 'Bob Sync', 'https://i.pravatar.cc/150?img=52', 'local'),
+('d342fd9b-0da5-43f2-8063-ae74bdf60503', 'carol.sync@example.com', 'carol_sync', 'Carol Sync', 'https://i.pravatar.cc/150?img=53', 'local'),
+
+-- LINE-specific test users
+('f342fd9b-0da5-43f2-8063-ae74bdf60505', 'alice.line@example.com', 'alice_line', 'Alice Line', 'https://i.pravatar.cc/150?img=55', 'local'),
+('g342fd9b-0da5-43f2-8063-ae74bdf60506', 'bob.line@example.com', 'bob_line', 'Bob Line', 'https://i.pravatar.cc/150?img=56', 'local'),
+('h342fd9b-0da5-43f2-8063-ae74bdf60507', 'carol.line@example.com', 'carol_line', 'Carol Line', 'https://i.pravatar.cc/150?img=57', 'local'),
+('i342fd9b-0da5-43f2-8063-ae74bdf60508', 'david.line@example.com', 'david_line', 'David Line', 'https://i.pravatar.cc/150?img=58', 'local'),
 
 -- User already friends with sync user
-('sync-friend-1', 'existing.friend@example.com', 'existing_friend', 'Existing Friend', 'https://i.pravatar.cc/150?img=54', 'local')
+('e342fd9b-0da5-43f2-8063-ae74bdf60504', 'existing.friend@example.com', 'existing_friend', 'Existing Friend', 'https://i.pravatar.cc/150?img=54', 'local')
 ON CONFLICT (id) DO NOTHING;
 
 -- Create existing friendship
@@ -50,7 +56,7 @@ ON CONFLICT (user_email, friend_email) DO NOTHING;
 ```json
 {
   "user": {
-    "id": "sync-user-1",
+    "id": "a342fd9b-0da5-43f2-8063-ae74bdf60500",
     "username": "sync.test@example.com",
     "email": "sync.test@example.com",
     "name": "Sync Test User"
@@ -197,8 +203,56 @@ Content-Type: application/json
 - `success` is false
 - Clear validation error message
 
-### Test Case 4: LINE Sync (Not Implemented)
-**Purpose:** Verify proper handling of unsupported platforms
+### Test Case 4: Test Mock LINE Sync (Development Mode)
+**Purpose:** Verify LINE sync works with mock data
+
+**Endpoint:** `GET /social/sync/test?platform=line`
+**Headers:**
+```
+Authorization: Bearer {your_access_token}
+```
+
+**Expected Response:**
+```json
+{
+  "success": true,
+  "message": "Test sync line successfully",
+  "result": {
+    "platform": "line",
+    "totalContacts": 4,
+    "cashpopUsersFound": 4,
+    "newFriendshipsCreated": 3,
+    "alreadyFriends": 1,
+    "errors": [],
+    "details": {
+      "contactsProcessed": [
+        {
+          "id": "mock_line_1",
+          "name": "Alice Line",
+          "email": "alice.line@example.com",
+          "platform": "line"
+        }
+      ],
+      "newFriends": [
+        {
+          "email": "alice.line@example.com",
+          "name": "Alice Line"
+        }
+      ]
+    }
+  }
+}
+```
+
+**Verification Points:**
+- Response status: 200
+- `success` is true
+- `totalContacts` > 0 (mock data)
+- `cashpopUsersFound` shows users found in database
+- `newFriendshipsCreated` shows new relationships created
+
+### Test Case 4a: LINE Sync with Invalid Token
+**Purpose:** Verify proper error handling for invalid LINE tokens
 
 **Endpoint:** `POST /social/sync/contacts`
 **Headers:**
@@ -211,7 +265,7 @@ Content-Type: application/json
 {
   "platform": "line",
   "line": {
-    "token": "line_token_123"
+    "token": "invalid_line_token_123"
   }
 }
 ```
@@ -220,14 +274,55 @@ Content-Type: application/json
 ```json
 {
   "success": false,
-  "message": "LINE sync chưa được hỗ trợ",
+  "message": "LINE access token không hợp lệ hoặc đã hết hạn",
   "result": {
     "platform": "line",
     "totalContacts": 0,
     "cashpopUsersFound": 0,
     "newFriendshipsCreated": 0,
     "alreadyFriends": 0,
-    "errors": ["LINE sync chưa được hỗ trợ"],
+    "errors": ["LINE access token không hợp lệ hoặc đã hết hạn"],
+    "details": {
+      "contactsProcessed": [],
+      "newFriends": []
+    }
+  }
+}
+```
+
+**Verification Points:**
+- Response status: 200 (error handled gracefully)
+- `success` is false
+- Proper error message in `message` field
+
+### Test Case 4b: LINE Sync with Missing Token
+**Purpose:** Verify validation for required LINE token
+
+**Endpoint:** `POST /social/sync/contacts`
+**Headers:**
+```
+Authorization: Bearer {your_access_token}
+Content-Type: application/json
+```
+**Request Body:**
+```json
+{
+  "platform": "line"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "success": false,
+  "message": "LINE access token is required",
+  "result": {
+    "platform": "line",
+    "totalContacts": 0,
+    "cashpopUsersFound": 0,
+    "newFriendshipsCreated": 0,
+    "alreadyFriends": 0,
+    "errors": ["LINE access token is required"],
     "details": {
       "contactsProcessed": [],
       "newFriends": []
@@ -239,7 +334,7 @@ Content-Type: application/json
 **Verification Points:**
 - Response status: 200
 - `success` is false
-- Appropriate "not supported" message
+- Clear validation error message
 
 ### Test Case 5: Phone Contact Sync (Not Implemented)
 **Purpose:** Verify proper handling of unsupported platforms
@@ -359,10 +454,11 @@ Authorization: Bearer invalid_token
 
 ## Mock Data Structure
 
+### Facebook Mock Contacts
 The Facebook sync service provides mock data for testing:
 
 ```javascript
-// Mock contacts returned by getMockContacts()
+// Mock contacts returned by FacebookSyncService.getMockContacts()
 [
   {
     "id": "mock_fb_1",
@@ -371,14 +467,14 @@ The Facebook sync service provides mock data for testing:
     "platform": "facebook"
   },
   {
-    "id": "mock_fb_2", 
+    "id": "mock_fb_2",
     "name": "Bob Sync",
     "email": "bob.sync@example.com",
     "platform": "facebook"
   },
   {
     "id": "mock_fb_3",
-    "name": "Carol Sync", 
+    "name": "Carol Sync",
     "email": "carol.sync@example.com",
     "platform": "facebook"
   },
@@ -393,6 +489,39 @@ The Facebook sync service provides mock data for testing:
     "name": "Non CashPop User",
     "email": "nonuser@example.com",
     "platform": "facebook"
+  }
+]
+```
+
+### LINE Mock Contacts
+The LINE sync service provides mock data for testing:
+
+```javascript
+// Mock contacts returned by LineSyncService.getMockContacts()
+[
+  {
+    "id": "mock_line_1",
+    "name": "Alice Line",
+    "email": "alice.line@example.com",
+    "platform": "line"
+  },
+  {
+    "id": "mock_line_2",
+    "name": "Bob Line",
+    "email": "bob.line@example.com",
+    "platform": "line"
+  },
+  {
+    "id": "mock_line_3",
+    "name": "Carol Line",
+    "email": "carol.line@example.com",
+    "platform": "line"
+  },
+  {
+    "id": "mock_line_4",
+    "name": "David Line",
+    "email": "david.line@example.com",
+    "platform": "line"
   }
 ]
 ```
@@ -431,9 +560,13 @@ ORDER BY created_at DESC;
 3. Verify contact users exist: `SELECT * FROM users WHERE email IN ('alice.sync@example.com', 'bob.sync@example.com')`
 
 ## Notes
-- Mock sync is available for development/testing without real Facebook tokens
-- Real Facebook sync requires valid access tokens with appropriate permissions
-- LINE and phone contact sync are not yet implemented
+- **Mock sync** is available for development/testing without real tokens (both Facebook and LINE)
+- **Facebook sync** requires valid access tokens with appropriate permissions
+- **LINE sync** is now implemented with mock data support for development
+  - Real LINE sync requires valid LINE access tokens
+  - LINE API has limitations on contact access (see service implementation)
+- **Phone contact sync** is not yet implemented
 - Sync creates bidirectional friendships automatically
 - Existing friendships are skipped to avoid duplicates
 - All sync operations are logged for debugging purposes
+- Both Facebook and LINE sync support the test endpoint for development
