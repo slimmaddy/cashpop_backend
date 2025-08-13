@@ -529,18 +529,18 @@ Run these SQL queries to verify friend request operations:
 -- Check pending requests TO main user (what user sees in "received requests")
 SELECT 'Received Requests' as type, r.*, u.name as sender_name
 FROM relationships r
-JOIN users u ON r.user_email = u.email
-WHERE r.friend_email = 'requester@example.com'
+JOIN users u ON r."userEmail" = u.email
+WHERE r."friendEmail" = 'requester@example.com'
   AND r.status = 'pending'
-ORDER BY r.created_at DESC;
+ORDER BY r."createdAt" DESC;
 
 -- Check requests SENT BY main user
 SELECT 'Sent Requests' as type, r.*, u.name as target_name
 FROM relationships r
-JOIN users u ON r.friend_email = u.email
-WHERE r.user_email = 'requester@example.com'
+JOIN users u ON r."friendEmail" = u.email
+WHERE r."userEmail" = 'requester@example.com'
   AND r.status = 'pending'
-ORDER BY r.created_at DESC;
+ORDER BY r."createdAt" DESC;
 
 -- Check accepted friendships (bidirectional)
 SELECT 'Accepted Friends' as type, r.*, u.name as friend_name
@@ -582,7 +582,7 @@ ORDER BY r.created_at DESC;
 - **Relationship Creation**: When sending a friend request, the system creates:
   - Primary relationship: Sender -> Receiver (status = 'pending')
   - Reverse relationship: Receiver -> Sender (status = 'received') - for bidirectional tracking
-- **Database Schema**: Uses snake_case column names (user_email, friend_email, initiated_by, accepted_at, created_at, updated_at)
+- **Database Schema**: Uses camelCase column names (userEmail, friendEmail, initiatedBy, acceptedAt, createdAt, updatedAt)
 - **Status Values**: 'pending', 'accepted', 'rejected', 'blocked', 'received' (from RelationshipStatus enum)
 - **Received Requests API**: Queries `WHERE friendEmail = userEmail AND status = 'pending'`
 - **Accept/Reject**: Updates BOTH bidirectional relationships to maintain consistency

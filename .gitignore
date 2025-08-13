@@ -55,3 +55,7 @@ test-line-token.js
 test-line-with-id-token.js
 create-line-sync-test-data.sql
 generate-line-auth-url.js
+line-sync-test-data.sql
+line-sync-unit-test-plan.md
+migration-snake-to-camel-case.sql
+create_relationships_test_data.sql

@@ -194,15 +194,15 @@ export class SuggestionService {
    */
   private async getMutualFriendsCount(userEmail: string, suggestedUserEmail: string): Promise<number> {
     const mutualFriendsQuery = `
-      SELECT COUNT(DISTINCT r1.friend_email) as mutual_count
+      SELECT COUNT(DISTINCT r1."friendEmail") as mutual_count
       FROM relationships r1
-      INNER JOIN relationships r2 ON r1.friend_email = r2.friend_email
-      WHERE r1.user_email = $1
-        AND r2.user_email = $2
+      INNER JOIN relationships r2 ON r1."friendEmail" = r2."friendEmail"
+      WHERE r1."userEmail" = $1
+        AND r2."userEmail" = $2
         AND r1.status = 'accepted'
         AND r2.status = 'accepted'
-        AND r1.friend_email != $1
-        AND r1.friend_email != $2
+        AND r1."friendEmail" != $1
+        AND r1."friendEmail" != $2
     `;
 
     const result = await this.relationshipRepository.query(mutualFriendsQuery, [userEmail, suggestedUserEmail]);
@@ -346,10 +346,10 @@ export class SuggestionService {
     const query = `
       SELECT u.name
       FROM relationships user_rel
-      JOIN relationships suggested_rel ON user_rel.friend_email = suggested_rel.friend_email
-      JOIN users u ON user_rel.friend_email = u.email
-      WHERE user_rel.user_email = $1 
-        AND suggested_rel.user_email = $2
+      JOIN relationships suggested_rel ON user_rel."friendEmail" = suggested_rel."friendEmail"
+      JOIN users u ON user_rel."friendEmail" = u.email
+      WHERE user_rel."userEmail" = $1
+        AND suggested_rel."userEmail" = $2
         AND user_rel.status = 'accepted'
         AND suggested_rel.status = 'accepted'
       ORDER BY u.name
@@ -357,7 +357,7 @@ export class SuggestionService {
     `;
 
     const mutualFriends = await this.relationshipRepository.query(query, [userEmail, suggestedUserEmail]);
-    
+
     return {
       mutual_friends: mutualFriends.map((f: any) => f.name),
       source_info: 'email_search'

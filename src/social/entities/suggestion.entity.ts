@@ -32,10 +32,10 @@ export class Suggestion {
     @PrimaryGeneratedColumn('uuid')
     id: string
 
-    @Column({name : 'user_email'})
+    @Column({ name: 'userEmail' })
     userEmail: string
 
-    @Column({name : 'suggested_user_email'})
+    @Column({ name: 'suggestedUserEmail' })
     suggestedUserEmail: string
 
     @Column({
@@ -55,27 +55,27 @@ export class Suggestion {
     @Column({ type: 'text', nullable: true })
     reason: string; // "You have 3 mutual friends"
 
-    @Column({ type: 'int', default: 0 })
+    @Column({ name: 'mutualFriendsCount', type: 'int', default: 0 })
     mutualFriendsCount: number;
 
     @Column({ type: 'jsonb', nullable: true })
     metadata: any; // Thông tin thêm (platform data, etc.)
 
-    @Column({ name: 'dismissed_at', type: 'timestamp', nullable: true })
+    @Column({ name: 'dismissedAt', type: 'timestamp', nullable: true })
     dismissedAt: Date;
 
-    @CreateDateColumn({ name: 'created_at' })
+    @CreateDateColumn({ name: 'createdAt' })
     createdAt: Date
 
-    @UpdateDateColumn({ name: 'updated_at' })
+    @UpdateDateColumn({ name: 'updatedAt' })
     updatedAt: Date;
 
     // Relations
     @ManyToOne(() => User, (user) => user.receivedSuggestions)
-    @JoinColumn({ name: 'user_email', referencedColumnName: 'email' })
+    @JoinColumn({ name: 'userEmail', referencedColumnName: 'email' })
     user: User;
 
     @ManyToOne(() => User, (user) => user.givenSuggestions)
-    @JoinColumn({ name: 'suggested_user_email', referencedColumnName: 'email' })
+    @JoinColumn({ name: 'suggestedUserEmail', referencedColumnName: 'email' })
     suggestedUser: User;
 }
