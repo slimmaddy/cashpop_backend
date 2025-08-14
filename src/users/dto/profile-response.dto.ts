@@ -68,6 +68,26 @@ export class ProfileResponseDto {
   inviteCode: string;
 
   @Expose()
+  @ApiProperty({ description: "The phone number of the user", required: false })
+  phoneNumber: string;
+
+  @Expose()
+  @ApiProperty({ description: "Whether the phone number is verified", required: false })
+  phoneVerified: boolean;
+
+  @Expose()
+  @ApiProperty({ description: "The phone carrier (SKT, KT, LG U+)", required: false })
+  phoneCarrier: string;
+
+  @Expose()
+  @ApiProperty({ description: "Overall identity verification status", required: false })
+  identityVerified: boolean;
+
+  @Expose()
+  @ApiProperty({ description: "When the phone was verified", required: false })
+  phoneVerifiedAt: Date;
+
+  @Expose()
   @ApiProperty({ description: "The date when the user was created" })
   createdAt: Date;
 

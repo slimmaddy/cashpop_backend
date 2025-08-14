@@ -23,10 +23,10 @@ export class Relationship {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: "user_email" })
+  @Column()
   userEmail: string;
 
-  @Column({ name: "friend_email" })
+  @Column()
   friendEmail: string;
 
   @Column({
@@ -36,22 +36,22 @@ export class Relationship {
   })
   status: RelationshipStatus;
 
-  @Column({ name: "initiated_by" })
+  @Column()
   initiatedBy: string; // email của người gửi lời mời kết bạn
 
   @Column({ type: "text", nullable: true })
   message: string; // Tin nhắn kèm theo lời mời kết bạn
 
-  @Column({ name: "accepted_at", type: "timestamp", nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   acceptedAt: Date;
 
-  @Column({ name: "blocked_at", type: "timestamp", nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   blockedAt: Date;
 
-  @CreateDateColumn({ name: "created_at" })
+  @CreateDateColumn()
   createdAt: Date;
 
-  @UpdateDateColumn({ name: "updated_at" })
+  @UpdateDateColumn({ name: 'updatedAt' })
   updatedAt: Date;
 
   // Relations removed - using email directly instead of foreign keys

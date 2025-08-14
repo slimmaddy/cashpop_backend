@@ -12,7 +12,7 @@ import {
 import { Exclude } from "class-transformer";
 import * as bcrypt from "bcrypt";
 import { ApiProperty } from "@nestjs/swagger";
-import { Suggestion } from "src/social/entities/suggestion.entity";
+import { Suggestion } from "../../social/entities/suggestion.entity";
 
 export enum AuthProvider {
   LOCAL = "local",
@@ -98,9 +98,34 @@ export class User {
   @ApiProperty({ description: "The residential area of the user" })
   residentialArea: string;
 
-  // @Column({ nullable: true, unique: true })
-  // @ApiProperty({ description: "The phone number of the user" })
-  // phoneNumber: string;
+  @Column({ nullable: true, unique: true })
+  @ApiProperty({ description: "The phone number of the user" })
+  phoneNumber: string;
+
+  @Column({ nullable: true, default: false })
+  @ApiProperty({ description: "Whether the phone number is verified" })
+  phoneVerified: boolean;
+
+  @Column({ nullable: true })
+  @ApiProperty({ description: "The phone carrier (SKT, KT, LG U+)" })
+  phoneCarrier: string;
+
+  @Column({ nullable: true })
+  @ApiProperty({ description: "Hashed residence registration number (13 digits)" })
+  @Exclude()
+  residenceRegistrationNumber: string;
+
+  @Column({ nullable: true })
+  @ApiProperty({ description: "First 6 digits of residence registration number" })
+  residenceRegistrationPrefix: string;
+
+  @Column({ nullable: true })
+  @ApiProperty({ description: "When the phone was verified" })
+  phoneVerifiedAt: Date;
+
+  @Column({ nullable: true, default: false })
+  @ApiProperty({ description: "Overall identity verification status" })
+  identityVerified: boolean;
 
   @Column({ nullable: true, unique: true })
   @ApiProperty({

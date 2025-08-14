@@ -238,15 +238,15 @@ Run these SQL queries to verify the test data setup:
 -- Check main user's friends
 SELECT 'Current Friends' as type, u.name, u.email
 FROM relationships r
-JOIN users u ON r.friend_email = u.email  
-WHERE r.user_email = 'longlanhlong123123@gmail.com' 
+JOIN users u ON r."friendEmail" = u.email
+WHERE r."userEmail" = 'longlanhlong123123@gmail.com'
   AND r.status = 'accepted';
 
 -- Check active suggestions
 SELECT 'Active Suggestions' as type, u.name, s.reason, s."mutualFriendsCount"
 FROM suggestions s
-JOIN users u ON s.suggested_user_email = u.email
-WHERE s.user_email = 'longlanhlong123123@gmail.com' 
+JOIN users u ON s."suggestedUserEmail" = u.email
+WHERE s."userEmail" = 'longlanhlong123123@gmail.com'
   AND s.status = 'active'
 ORDER BY s."mutualFriendsCount" DESC;
 ```

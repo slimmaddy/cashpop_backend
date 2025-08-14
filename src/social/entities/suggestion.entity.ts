@@ -32,11 +32,11 @@ export class Suggestion {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ name: "user_email" })
-  userEmail: string;
+    @Column()
+    userEmail: string
 
-  @Column({ name: "suggested_user_email" })
-  suggestedUserEmail: string;
+    @Column()
+    suggestedUserEmail: string
 
   @Column({
     type: "enum",
@@ -61,21 +61,21 @@ export class Suggestion {
   @Column({ type: "jsonb", nullable: true })
   metadata: any; // Thông tin thêm (platform data, etc.)
 
-  @Column({ name: "dismissed_at", type: "timestamp", nullable: true })
-  dismissedAt: Date;
+    @Column({ type: 'timestamp', nullable: true })
+    dismissedAt: Date;
 
-  @CreateDateColumn({ name: "created_at" })
-  createdAt: Date;
+    @CreateDateColumn()
+    createdAt: Date
 
-  @UpdateDateColumn({ name: "updated_at" })
-  updatedAt: Date;
+    @UpdateDateColumn()
+    updatedAt: Date;
 
-  // Relations
-  @ManyToOne(() => User, (user) => user.receivedSuggestions)
-  @JoinColumn({ name: "user_email", referencedColumnName: "email" })
-  user: User;
+    // Relations
+    @ManyToOne(() => User, (user) => user.receivedSuggestions)
+    @JoinColumn({ name: 'userEmail', referencedColumnName: 'email' })
+    user: User;
 
-  @ManyToOne(() => User, (user) => user.givenSuggestions)
-  @JoinColumn({ name: "suggested_user_email", referencedColumnName: "email" })
-  suggestedUser: User;
+    @ManyToOne(() => User, (user) => user.givenSuggestions)
+    @JoinColumn({ name: 'suggestedUserEmail', referencedColumnName: 'email' })
+    suggestedUser: User;
 }

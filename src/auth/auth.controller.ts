@@ -59,6 +59,12 @@ import {
 import { LogoutResponseDto } from "./dto/logout.dto";
 import { TokensResponseDto } from "./dto/tokens-response.dto";
 import { LineAuthGuard } from "./guards/line-auth.guard";
+import {
+  InitiatePhoneVerificationDto,
+  VerifyPhoneOtpDto,
+  PhoneVerificationResponseDto,
+  PhoneVerificationStatusDto,
+} from "./dto/phone-verification.dto";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -194,111 +200,6 @@ export class AuthController {
   async lineLogin(@Body() lineAuthDto: LineAuthDto, @Req() req) {
     const { email, lineId, name } = req.user;
     return this.authService.lineLogin(email, lineId, name);
-  }
-
-  @Post("line/test")
-  @ApiOperation({
-    summary: "Test LINE access token",
-    description:
-      "Simple test to check what your LINE token returns and troubleshoot email issues",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Test results with recommendations",
-  })
-  async testLineToken(@Body() body: { access_token: string }) {
-    const { access_token } = body;
-
-    if (!access_token) {
-      return {
-        success: false,
-        message: "access_token is required in request body",
-      };
-    }
-
-    const axios = require("axios");
-    const results = {
-      success: true,
-      profile: null,
-      userinfo: null,
-      tokenInfo: null,
-      emailFound: false,
-      recommendations: [],
-    };
-
-    try {
-      // Test profile endpoint
-      try {
-        const profileResponse = await axios.get(
-          "https://api.line.me/v2/profile",
-          {
-            headers: { Authorization: `Bearer ${access_token}` },
-          }
-        );
-        results.profile = profileResponse.data;
-      } catch (error) {
-        results.profile = { error: error.response?.data || error.message };
-      }
-
-      // Test userinfo endpoint (this is where email should be)
-      try {
-        const userinfoResponse = await axios.get(
-          "https://api.line.me/oauth2/v2.1/userinfo",
-          {
-            headers: { Authorization: `Bearer ${access_token}` },
-          }
-        );
-        results.userinfo = userinfoResponse.data;
-        if (userinfoResponse.data.email) {
-          results.emailFound = true;
-        }
-      } catch (error) {
-        results.userinfo = { error: error.response?.data || error.message };
-        if (error.response?.status === 403) {
-          results.recommendations.push(
-            "❌ OpenID Connect not enabled - Enable it in LINE Developers Console"
-          );
-        }
-      }
-
-      // Test token verification
-      try {
-        const verifyResponse = await axios.post(
-          "https://api.line.me/oauth2/v2.1/verify",
-          `access_token=${access_token}`,
-          { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-        );
-        results.tokenInfo = verifyResponse.data;
-
-        if (!verifyResponse.data.scope?.includes("email")) {
-          results.recommendations.push(
-            '❌ Missing email scope - Re-authorize with "email" scope'
-          );
-        }
-      } catch (error) {
-        results.tokenInfo = { error: error.response?.data || error.message };
-      }
-
-      // Add recommendations based on results
-      if (!results.emailFound) {
-        results.recommendations.push("⚠️ No email found in any endpoint");
-        results.recommendations.push(
-          "🔧 Check: 1) OpenID Connect enabled, 2) Email scope granted, 3) User has email in LINE account"
-        );
-      } else {
-        results.recommendations.push(
-          "✅ Email found! LINE login should work now"
-        );
-      }
-
-      return results;
-    } catch (error) {
-      return {
-        success: false,
-        message: "Test failed",
-        error: error.message,
-      };
-    }
   }
 
   @UseGuards(JwtAuthGuard)
@@ -443,5 +344,95 @@ export class AuthController {
   @ApiResponse({ status: 500, description: "Internal server error" })
   async removeAccount(@Req() req) {
     return this.authService.removeAccount(req.user.userId);
+  }
+
+  // ==================== PHONE VERIFICATION ENDPOINTS ====================
+
+  @Get("phone-verification/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get current phone verification status',
+    description: 'Retrieve the current phone verification status for the authenticated user.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone verification status retrieved successfully',
+    type: PhoneVerificationStatusDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found'
+  })
+  async getPhoneVerificationStatus(@Req() req): Promise<PhoneVerificationStatusDto> {
+    return this.authService.getPhoneVerificationStatus(req.user.userId);
+  }
+
+  @Post("phone-verification/initiate")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Initiate phone identity verification for logged-in user',
+    description: 'Start the phone verification process by providing personal information and phone number. An OTP will be sent via SMS.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: PhoneVerificationResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or invalid data'
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - phone number or residence number already in use'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  async initiatePhoneVerification(
+    @Req() req,
+    @Body() dto: InitiatePhoneVerificationDto,
+  ): Promise<PhoneVerificationResponseDto> {
+    return this.authService.initiatePhoneVerification(req.user.userId, dto);
+  }
+
+  @Post("phone-verification/verify-otp")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify OTP and complete phone verification',
+    description: 'Complete the phone verification process by providing the OTP received via SMS.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone verification completed successfully',
+    type: PhoneVerificationResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid OTP or verification error'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification session not found'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  async verifyPhoneOtp(
+    @Req() req,
+    @Body() dto: VerifyPhoneOtpDto,
+  ): Promise<PhoneVerificationResponseDto> {
+    return this.authService.verifyPhoneOtp(req.user.userId, dto);
   }
 }

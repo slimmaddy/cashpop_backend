@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
+import { TypeOrmModule } from "@nestjs/typeorm";
 import { UsersModule } from "../users/users.module";
 import { ServicesModule } from "../services/services.module";
 import { AuthService } from "./auth.service";
@@ -14,12 +15,16 @@ import { EmailVerificationStrategy } from "./strategies/email-verification.strat
 import { TokenService } from "./token.service";
 import { LineStrategy } from "./strategies/line.strategy";
 
+// Phone Verification
+import { PhoneVerificationSession } from "./entities/phone-verification-session.entity";
+
 @Module({
   imports: [
     UsersModule,
     ServicesModule,
     PassportModule,
     ConfigModule,
+    TypeOrmModule.forFeature([PhoneVerificationSession]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
