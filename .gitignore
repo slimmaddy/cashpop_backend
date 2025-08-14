@@ -55,3 +55,6 @@ test-line-token.js
 test-line-with-id-token.js
 create-line-sync-test-data.sql
 generate-line-auth-url.js
+
+.claude
+CLAUDE.md

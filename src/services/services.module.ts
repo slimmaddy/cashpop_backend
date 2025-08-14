@@ -1,6 +1,6 @@
-import { Module } from '@nestjs/common';
-import { ValkeyService } from './valkey.service';
-import { MailerService } from './mailer.service';
+import { Module } from "@nestjs/common";
+import { ValkeyService } from "./valkey.service";
+import { MailerService } from "./mailer.service";
 
 @Module({
   providers: [ValkeyService, MailerService],

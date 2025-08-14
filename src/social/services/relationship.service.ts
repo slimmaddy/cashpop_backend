@@ -1,10 +1,18 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Relationship, RelationshipStatus } from '../entities/relationship.entity';
-import { User } from '../../users/entities/user.entity';
-import { UsersService } from '../../users/users.service';
-import { UserContextService } from './user-context.service';
+import {
+  Injectable,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import {
+  Relationship,
+  RelationshipStatus,
+} from "../entities/relationship.entity";
+import { User } from "../../users/entities/user.entity";
+import { UsersService } from "../../users/users.service";
+import { UserContextService } from "./user-context.service";
 import {
   RelationshipResponseDto,
   GetFriendsDto,
@@ -13,7 +21,7 @@ import {
   FriendRequestDto,
   GetFriendRequestsDto,
   FriendRequestActionResponseDto,
-} from '../dto/relationship.dto';
+} from "../dto/relationship.dto";
 
 @Injectable()
 export class RelationshipService {
@@ -23,7 +31,7 @@ export class RelationshipService {
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private usersService: UsersService,
-    private userContextService: UserContextService,
+    private userContextService: UserContextService
   ) {}
 
   /**
@@ -45,58 +53,64 @@ export class RelationshipService {
 
     // Query đơn giản: chỉ lấy relationship đã accepted
     const queryBuilder = this.relationshipRepository
-      .createQueryBuilder('relationship')
-      .where('relationship.userEmail = :userEmail AND relationship.status = :status', {
-        userEmail,
-        status: RelationshipStatus.ACCEPTED
-      });
+      .createQueryBuilder("relationship")
+      .where(
+        "relationship.userEmail = :userEmail AND relationship.status = :status",
+        {
+          userEmail,
+          status: RelationshipStatus.ACCEPTED,
+        }
+      );
 
     // Tìm kiếm theo email của friend
     if (search) {
-      queryBuilder.andWhere(
-        'relationship.friendEmail ILIKE :search',
-        { search: `%${search}%` }
-      );
+      queryBuilder.andWhere("relationship.friendEmail ILIKE :search", {
+        search: `%${search}%`,
+      });
     }
 
     // Sắp xếp và phân trang
     queryBuilder
-      .orderBy('relationship.createdAt', 'DESC')
+      .orderBy("relationship.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
     const [relationships, total] = await queryBuilder.getManyAndCount();
 
-    console.log('🔍 Debug RelationshipService:');
-    console.log('- user_email:', userEmail);
-    console.log('- relationships found:', relationships.length);
-    console.log('- total:', total);
-    console.log('- sample relationship:', relationships[0]);
+    console.log("🔍 Debug RelationshipService:");
+    console.log("- user_email:", userEmail);
+    console.log("- relationships found:", relationships.length);
+    console.log("- total:", total);
+    console.log("- sample relationship:", relationships[0]);
 
     // ✅ OPTIMIZED: Batch load friend users để tránh N+1 queries
-    const friendEmails = relationships.map(r => r.friendEmail);
-    const friendUsersMap = await this.userContextService.getUsersByEmails(friendEmails);
+    const friendEmails = relationships.map((r) => r.friendEmail);
+    const friendUsersMap = await this.userContextService.getUsersByEmails(
+      friendEmails
+    );
 
     // Transform data thành format cần thiết cho frontend
-    const friends: RelationshipResponseDto[] = relationships.map((relationship) => {
-      const friendUser = friendUsersMap.get(relationship.friendEmail);
+    const friends: RelationshipResponseDto[] = relationships.map(
+      (relationship) => {
+        const friendUser = friendUsersMap.get(relationship.friendEmail);
 
-      return {
-        id: relationship.id,
-        friend: {
-          id: friendUser?.id || '',
-          email: relationship.friendEmail,
-          username: friendUser?.username || '',
-          name: friendUser?.name || '',
-          avatar: friendUser?.avatar || null,
-        },
-        status: relationship.status,
-        initiatedBy: relationship.initiatedBy,
-        message: relationship.message,
-        createdAt: relationship.createdAt,
-        acceptedAt: relationship.acceptedAt,
-      };
-    });
+        return {
+          id: relationship.id,
+          friend: {
+            id: friendUser?.id || "",
+            email: relationship.friendEmail,
+            username: friendUser?.username || "",
+            name: friendUser?.name || "",
+            avatar: friendUser?.avatar || null,
+          },
+          status: relationship.status,
+          initiatedBy: relationship.initiatedBy,
+          message: relationship.message,
+          createdAt: relationship.createdAt,
+          acceptedAt: relationship.acceptedAt,
+        };
+      }
+    );
 
     return { friends, total };
   }
@@ -112,25 +126,30 @@ export class RelationshipService {
 
     // 1. Validation: Không thể gửi lời mời cho chính mình
     if (senderEmail === friendEmail) {
-      throw new BadRequestException('Không thể gửi lời mời kết bạn cho chính mình');
+      throw new BadRequestException(
+        "Không thể gửi lời mời kết bạn cho chính mình"
+      );
     }
 
     // 2. Kiểm tra user người nhận có tồn tại không
     const friendUser = await this.usersService.findByEmail(friendEmail);
     if (!friendUser) {
-      throw new NotFoundException('Không tìm thấy người dùng với email này');
+      throw new NotFoundException("Không tìm thấy người dùng với email này");
     }
 
     // 3. Kiểm tra mối quan hệ đã tồn tại chưa
-    const existingRelationship = await this.checkExistingRelationship(senderEmail, friendEmail);
+    const existingRelationship = await this.checkExistingRelationship(
+      senderEmail,
+      friendEmail
+    );
     if (existingRelationship) {
       switch (existingRelationship.status) {
         case RelationshipStatus.ACCEPTED:
-          throw new ConflictException('Bạn đã là bạn bè với người này rồi');
+          throw new ConflictException("Bạn đã là bạn bè với người này rồi");
         case RelationshipStatus.PENDING:
-          throw new ConflictException('Lời mời kết bạn đã được gửi trước đó');
+          throw new ConflictException("Lời mời kết bạn đã được gửi trước đó");
         case RelationshipStatus.BLOCKED:
-          throw new ConflictException('Không thể gửi lời mời kết bạn');
+          throw new ConflictException("Không thể gửi lời mời kết bạn");
         case RelationshipStatus.REJECTED:
           // Cho phép gửi lại sau khi bị từ chối
           break;
@@ -139,15 +158,20 @@ export class RelationshipService {
 
     // 4. Tạo hoặc cập nhật relationship
     let relationship: Relationship;
-    
-    if (existingRelationship && existingRelationship.status === RelationshipStatus.REJECTED) {
+
+    if (
+      existingRelationship &&
+      existingRelationship.status === RelationshipStatus.REJECTED
+    ) {
       // Cập nhật relationship cũ
       existingRelationship.status = RelationshipStatus.PENDING;
       existingRelationship.initiatedBy = senderEmail;
       existingRelationship.message = message || null;
       existingRelationship.acceptedAt = null;
       existingRelationship.blockedAt = null;
-      relationship = await this.relationshipRepository.save(existingRelationship);
+      relationship = await this.relationshipRepository.save(
+        existingRelationship
+      );
 
       // ✅ FIX #5: Tìm và cập nhật reverse relationship cũ
       const oldReverseRelationship = await this.relationshipRepository.findOne({
@@ -155,9 +179,9 @@ export class RelationshipService {
           userEmail: friendEmail,
           friendEmail: senderEmail,
           status: RelationshipStatus.REJECTED,
-        }
+        },
       });
-      
+
       if (oldReverseRelationship) {
         oldReverseRelationship.status = RelationshipStatus.RECEIVED;
         oldReverseRelationship.initiatedBy = senderEmail;
@@ -200,7 +224,7 @@ export class RelationshipService {
 
     return {
       success: true,
-      message: 'Lời mời kết bạn đã được gửi thành công',
+      message: "Lời mời kết bạn đã được gửi thành công",
       relationship: {
         id: relationship.id,
         friend: {
@@ -227,9 +251,7 @@ export class RelationshipService {
     friendEmail: string
   ): Promise<Relationship | null> {
     return await this.relationshipRepository.findOne({
-      where: [
-        { userEmail, friendEmail },
-      ],
+      where: [{ userEmail, friendEmail }],
     });
   }
 
@@ -242,11 +264,11 @@ export class RelationshipService {
   ): Promise<{ primary: Relationship | null; reverse: Relationship | null }> {
     const [primary, reverse] = await Promise.all([
       this.relationshipRepository.findOne({
-        where: { userEmail, friendEmail }
+        where: { userEmail, friendEmail },
       }),
       this.relationshipRepository.findOne({
-        where: { userEmail: friendEmail, friendEmail: userEmail }
-      })
+        where: { userEmail: friendEmail, friendEmail: userEmail },
+      }),
     ]);
 
     return { primary, reverse };
@@ -259,22 +281,33 @@ export class RelationshipService {
     userEmail: string,
     friendEmail: string,
     message: string
-  ): Promise<{ created: boolean; message: string; relationship?: Relationship }> {
-
+  ): Promise<{
+    created: boolean;
+    message: string;
+    relationship?: Relationship;
+  }> {
     // Kiểm tra relationship đã tồn tại
-    const { primary, reverse } = await this.checkBidirectionalRelationship(userEmail, friendEmail);
+    const { primary, reverse } = await this.checkBidirectionalRelationship(
+      userEmail,
+      friendEmail
+    );
 
     // Nếu đã là bạn
-    if (primary?.status === RelationshipStatus.ACCEPTED || reverse?.status === RelationshipStatus.ACCEPTED) {
-      return { created: false, message: 'Already friends' };
+    if (
+      primary?.status === RelationshipStatus.ACCEPTED ||
+      reverse?.status === RelationshipStatus.ACCEPTED
+    ) {
+      return { created: false, message: "Already friends" };
     }
 
     // Nếu có pending request
-    if (primary?.status === RelationshipStatus.PENDING ||
-        primary?.status === RelationshipStatus.RECEIVED ||
-        reverse?.status === RelationshipStatus.PENDING ||
-        reverse?.status === RelationshipStatus.RECEIVED) {
-      return { created: false, message: 'Pending request exists' };
+    if (
+      primary?.status === RelationshipStatus.PENDING ||
+      primary?.status === RelationshipStatus.RECEIVED ||
+      reverse?.status === RelationshipStatus.PENDING ||
+      reverse?.status === RelationshipStatus.RECEIVED
+    ) {
+      return { created: false, message: "Pending request exists" };
     }
 
     const now = new Date();
@@ -295,9 +328,11 @@ export class RelationshipService {
         status: RelationshipStatus.ACCEPTED,
         initiatedBy: userEmail,
         message,
-        acceptedAt: now
+        acceptedAt: now,
       });
-      primaryRelationship = await this.relationshipRepository.save(primaryRelationship);
+      primaryRelationship = await this.relationshipRepository.save(
+        primaryRelationship
+      );
     }
 
     // Tạo hoặc cập nhật reverse relationship
@@ -315,18 +350,18 @@ export class RelationshipService {
         status: RelationshipStatus.ACCEPTED,
         initiatedBy: userEmail,
         message,
-        acceptedAt: now
+        acceptedAt: now,
       });
       await this.relationshipRepository.save(reverseRelationship);
     }
 
     return {
       created: true,
-      message: 'Friendship created successfully',
-      relationship: primaryRelationship
+      message: "Friendship created successfully",
+      relationship: primaryRelationship,
     };
   }
-  
+
   /**
    * Lấy danh sách lời mời kết bạn đã nhận
    */
@@ -338,26 +373,29 @@ export class RelationshipService {
     const skip = (page - 1) * limit;
 
     // Tìm những relationship mà user là người nhận và status = PENDING
-    const [relationships, total] = await this.relationshipRepository.findAndCount({
-    where: {
-      friendEmail: userEmail, // ✅ User hiện tại là người nhận lời mời
-      status: RelationshipStatus.PENDING,
-    },
-    order: {
-      createdAt: 'DESC',
-    },
-    take: limit,
-    skip,
-  });
+    const [relationships, total] =
+      await this.relationshipRepository.findAndCount({
+        where: {
+          friendEmail: userEmail, // ✅ User hiện tại là người nhận lời mời
+          status: RelationshipStatus.PENDING,
+        },
+        order: {
+          createdAt: "DESC",
+        },
+        take: limit,
+        skip,
+      });
 
-    console.log('🔍 Debug getFriendRequests:');
-    console.log('- userEmail:', userEmail);
-    console.log('- requests found:', relationships.length);
-    console.log('- total:', total);
+    console.log("🔍 Debug getFriendRequests:");
+    console.log("- userEmail:", userEmail);
+    console.log("- requests found:", relationships.length);
+    console.log("- total:", total);
 
     // ✅ OPTIMIZED: Batch load sender users để tránh N+1 queries
-    const senderEmails = relationships.map(r => r.userEmail);
-    const senderUsersMap = await this.userContextService.getUsersByEmails(senderEmails);
+    const senderEmails = relationships.map((r) => r.userEmail);
+    const senderUsersMap = await this.userContextService.getUsersByEmails(
+      senderEmails
+    );
 
     // Transform data thành format cần thiết cho frontend
     const requests: FriendRequestDto[] = relationships.map((relationship) => {
@@ -366,10 +404,10 @@ export class RelationshipService {
       return {
         id: relationship.id,
         sender: {
-          id: senderUser?.id || '',
+          id: senderUser?.id || "",
           email: relationship.userEmail,
-          username: senderUser?.username || '',
-          name: senderUser?.name || '',
+          username: senderUser?.username || "",
+          name: senderUser?.name || "",
           avatar: senderUser?.avatar || null,
         },
         message: relationship.message,
@@ -389,16 +427,18 @@ export class RelationshipService {
     userEmail: string,
     requestId: string
   ): Promise<FriendRequestActionResponseDto> {
-
     // Kiểm tra xem lời mời có tồn tại không và vẫn còn PENDING
     const currentRelationship = await this.relationshipRepository.findOne({
-      where: { id: requestId }
+      where: { id: requestId },
     });
-    
-    if (!currentRelationship || currentRelationship.status !== RelationshipStatus.PENDING) {
-      throw new ConflictException('Lời mời đã được xử lý hoặc không tồn tại');
+
+    if (
+      !currentRelationship ||
+      currentRelationship.status !== RelationshipStatus.PENDING
+    ) {
+      throw new ConflictException("Lời mời đã được xử lý hoặc không tồn tại");
     }
-    
+
     // 1. Tìm relationship request
     const relationship = await this.relationshipRepository.findOne({
       where: {
@@ -409,13 +449,17 @@ export class RelationshipService {
     });
 
     if (!relationship) {
-      throw new NotFoundException('Không tìm thấy lời mời kết bạn hoặc lời mời đã được xử lý');
+      throw new NotFoundException(
+        "Không tìm thấy lời mời kết bạn hoặc lời mời đã được xử lý"
+      );
     }
 
     // 2. Cập nhật relationship thành ACCEPTED
     relationship.status = RelationshipStatus.ACCEPTED;
     relationship.acceptedAt = new Date();
-    const updatedRelationship = await this.relationshipRepository.save(relationship);
+    const updatedRelationship = await this.relationshipRepository.save(
+      relationship
+    );
 
     // 3. Cập nhật relationship ngược lại (bidirectional)
     const reverseRelationship = await this.relationshipRepository.findOne({
@@ -432,18 +476,20 @@ export class RelationshipService {
     }
 
     // 4. Lấy thông tin sender để return
-    const senderUser = await this.usersService.findByEmail(relationship.userEmail);
+    const senderUser = await this.usersService.findByEmail(
+      relationship.userEmail
+    );
 
     return {
       success: true,
-      message: 'Đã chấp nhận lời mời kết bạn',
+      message: "Đã chấp nhận lời mời kết bạn",
       relationship: {
         id: updatedRelationship.id,
         friend: {
-          id: senderUser?.id || '',
+          id: senderUser?.id || "",
           email: senderUser?.email || relationship.userEmail,
-          username: senderUser?.username || '',
-          name: senderUser?.name || '',
+          username: senderUser?.username || "",
+          name: senderUser?.name || "",
           avatar: senderUser?.avatar || null,
         },
         status: updatedRelationship.status,
@@ -472,7 +518,9 @@ export class RelationshipService {
     });
 
     if (!relationship) {
-      throw new NotFoundException('Không tìm thấy lời mời kết bạn hoặc lời mời đã được xử lý');
+      throw new NotFoundException(
+        "Không tìm thấy lời mời kết bạn hoặc lời mời đã được xử lý"
+      );
     }
 
     // 2. Cập nhật relationship thành REJECTED
@@ -494,7 +542,7 @@ export class RelationshipService {
 
     return {
       success: true,
-      message: 'Đã từ chối lời mời kết bạn',
+      message: "Đã từ chối lời mời kết bạn",
       requestId: requestId,
     };
   }

@@ -1,26 +1,26 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { HttpModule } from '@nestjs/axios';
-import { UsersModule } from '../users/users.module';
+import { Module } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { HttpModule } from "@nestjs/axios";
+import { UsersModule } from "../users/users.module";
 
 // Entities
-import { Relationship } from './entities/relationship.entity';
-import { Suggestion } from './entities/suggestion.entity';
-import { User } from '../users/entities/user.entity';
+import { Relationship } from "./entities/relationship.entity";
+import { Suggestion } from "./entities/suggestion.entity";
+import { User } from "../users/entities/user.entity";
 
 // Services
-import { RelationshipService } from './services/relationship.service';
-import { SuggestionService } from './services/suggestion.service';
-import { SocialSyncService } from './services/social-sync.service';
-import { FacebookSyncService } from './services/syncing-facebook.service';
-import { LineSyncService } from './services/syncing-line.service';
-import { UserLookupService } from './services/user-lookup.service';
-import { UserContextService } from './services/user-context.service';
+import { RelationshipService } from "./services/relationship.service";
+import { SuggestionService } from "./services/suggestion.service";
+import { SocialSyncService } from "./services/social-sync.service";
+import { FacebookSyncService } from "./services/syncing-facebook.service";
+import { LineSyncService } from "./services/syncing-line.service";
+import { UserLookupService } from "./services/user-lookup.service";
+import { UserContextService } from "./services/user-context.service";
 
 // Controllers
-import { RelationshipController } from './controllers/relationship.controller';
-import { SuggestionController } from './controllers/suggestion.controller';
-import { SyncController } from './controllers/sync.controller';
+import { RelationshipController } from "./controllers/relationship.controller";
+import { SuggestionController } from "./controllers/suggestion.controller";
+import { SyncController } from "./controllers/sync.controller";
 
 /**
  * Social Module - Quản lý mối quan hệ bạn bè và gợi ý kết bạn
@@ -43,15 +43,15 @@ import { SyncController } from './controllers/sync.controller';
   imports: [
     TypeOrmModule.forFeature([
       Relationship, // Entity chính để lưu trữ mối quan hệ bạn bè
-      Suggestion,   // Entity để lưu trữ friend suggestions
-      User,         // Entity user để join lấy thông tin bạn bè
+      Suggestion, // Entity để lưu trữ friend suggestions
+      User, // Entity user để join lấy thông tin bạn bè
     ]),
     HttpModule.register({
       timeout: 15000, // 15 seconds timeout for external APIs
       maxRedirects: 3,
       headers: {
-        'User-Agent': 'CashPop-Backend/1.0'
-      }
+        "User-Agent": "CashPop-Backend/1.0",
+      },
     }),
     UsersModule, // Import UsersModule để sử dụng UsersService
   ],

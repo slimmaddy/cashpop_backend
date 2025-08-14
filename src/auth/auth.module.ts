@@ -40,7 +40,7 @@ import { LineStrategy } from "./strategies/line.strategy";
     RefreshStrategy,
     FacebookStrategy,
     EmailVerificationStrategy,
-    LineStrategy
+    LineStrategy,
   ],
   exports: [AuthService, TokenService],
 })

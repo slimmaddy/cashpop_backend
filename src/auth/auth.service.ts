@@ -44,23 +44,32 @@ export class AuthService {
    * @param refreshToken The refresh token to validate
    * @returns Object with user data and validation status, or null if user not found
    */
-  async validateRefreshToken(username: string, refreshToken: string): Promise<{ user: any, status: string } | null> {
-      const user = await this.usersService.findByUsername(username);
-      if (!user) return null;
-      
-      // Get refresh token expiration time from ConfigService
-      const refreshExpSec = this.configService.get<number>('REFRESH_TOKEN_EXPIRATION_IN_SEC', 604800);
-      
-      // Pass the expiration time to the User entity's validateRefreshToken method
-      const validationResult = await user.validateRefreshToken(refreshToken, refreshExpSec);
-      
-      if (validationResult.isValid) {
-          const { password, refreshToken, ...result } = user;
-          return { user: result, status: 'valid' };
-      }
-      
-      // Return the validation status even if the token is invalid
-      return { user: null, status: validationResult.status };
+  async validateRefreshToken(
+    username: string,
+    refreshToken: string
+  ): Promise<{ user: any; status: string } | null> {
+    const user = await this.usersService.findByUsername(username);
+    if (!user) return null;
+
+    // Get refresh token expiration time from ConfigService
+    const refreshExpSec = this.configService.get<number>(
+      "REFRESH_TOKEN_EXPIRATION_IN_SEC",
+      604800
+    );
+
+    // Pass the expiration time to the User entity's validateRefreshToken method
+    const validationResult = await user.validateRefreshToken(
+      refreshToken,
+      refreshExpSec
+    );
+
+    if (validationResult.isValid) {
+      const { password, refreshToken, ...result } = user;
+      return { user: result, status: "valid" };
+    }
+
+    // Return the validation status even if the token is invalid
+    return { user: null, status: validationResult.status };
   }
 
   async login(user: any) {
@@ -87,7 +96,9 @@ export class AuthService {
   async register(createUserDto: CreateUserDto) {
     try {
       // Check if email already exists
-      const existingUser = await this.usersService.findByEmail(createUserDto.email);
+      const existingUser = await this.usersService.findByEmail(
+        createUserDto.email
+      );
       if (existingUser) {
         throw new ConflictException("Email already exists");
       }
@@ -118,7 +129,11 @@ export class AuthService {
         accessToken,
       };
     } catch (error) {
-      if (error instanceof ConflictException || error instanceof BadRequestException || error instanceof UnauthorizedException) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException ||
+        error instanceof UnauthorizedException
+      ) {
         throw error;
       }
       throw new UnauthorizedException("Registration failed");
@@ -136,7 +151,6 @@ export class AuthService {
     return { message: "Logout successful" };
   }
 
-  
   async facebookLogin(email: string, providerId: string, name: string) {
     let user = await this.usersService.findByEmail(email);
 
@@ -149,7 +163,11 @@ export class AuthService {
       }
     } else {
       // Create new user if not exists
-      user = await this.usersService.createFacebookUser(email, providerId, name);
+      user = await this.usersService.createFacebookUser(
+        email,
+        providerId,
+        name
+      );
     }
 
     const tokens = await this.tokenService.generateAuthTokens(user.id);
@@ -170,7 +188,7 @@ export class AuthService {
 
   async lineLogin(email: string, providerId: string, name: string) {
     // Validate that email is not a placeholder
-    if (!email || email.includes('line.placeholder')) {
+    if (!email || email.includes("line.placeholder")) {
       throw new BadRequestException(
         "LINE authentication requires a valid email address. Please ensure your LINE account has an email and grant email permission."
       );
@@ -185,12 +203,15 @@ export class AuthService {
     }
 
     // Try to find user by LINE providerId first
-    let user = await this.usersService.findByProviderId(providerId, AuthProvider.LINE);
+    let user = await this.usersService.findByProviderId(
+      providerId,
+      AuthProvider.LINE
+    );
 
     if (!user) {
       // If not found by providerId, try finding by email
       user = await this.usersService.findByEmail(email);
-      
+
       if (user) {
         // If user exists with this email but different provider, check conflict
         if (user.provider !== AuthProvider.LINE) {
@@ -198,7 +219,7 @@ export class AuthService {
             `This email is already registered with ${user.provider} authentication. Please use the same login method.`
           );
         }
-        
+
         // Update providerId if user exists with same email but different LINE ID
         if (user.providerId !== providerId) {
           await this.usersService.updateProviderId(user.id, providerId);
@@ -215,7 +236,7 @@ export class AuthService {
             "This email is already registered with another account."
           );
         }
-        
+
         // Update user's email
         await this.usersService.updateUserEmail(user.id, email);
         user.email = email;
@@ -257,9 +278,14 @@ export class AuthService {
     }
 
     // Check if OTP already exists for this email
-    const existingOtp = await this.valkeyService.getOtp(email, OtpType.REGISTRATION);
+    const existingOtp = await this.valkeyService.getOtp(
+      email,
+      OtpType.REGISTRATION
+    );
     if (existingOtp) {
-      throw new BadRequestException("OTP already sent to this email address. Please check your inbox or try again after 5 minutes.");
+      throw new BadRequestException(
+        "OTP already sent to this email address. Please check your inbox or try again after 5 minutes."
+      );
     }
 
     const otp = this.generateOtp();
@@ -283,7 +309,10 @@ export class AuthService {
    */
   async verifyEmailOtp(email: string, otp: string) {
     // Get stored OTP from Valkey
-    const storedOtpData = await this.valkeyService.getOtp(email, OtpType.REGISTRATION);
+    const storedOtpData = await this.valkeyService.getOtp(
+      email,
+      OtpType.REGISTRATION
+    );
 
     if (!storedOtpData) {
       throw new BadRequestException("OTP expired or not found");
@@ -318,19 +347,33 @@ export class AuthService {
 
     // Check if user is not a local user (cannot reset password for social login users)
     if (user.provider !== AuthProvider.LOCAL) {
-      throw new BadRequestException(`${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} users cannot reset password. Please use ${user.provider} login.`);
+      throw new BadRequestException(
+        `${
+          user.provider.charAt(0).toUpperCase() + user.provider.slice(1)
+        } users cannot reset password. Please use ${user.provider} login.`
+      );
     }
 
     // Check if OTP already exists for this email
-    const existingOtp = await this.valkeyService.getOtp(email, OtpType.PASSWORD_RESET);
+    const existingOtp = await this.valkeyService.getOtp(
+      email,
+      OtpType.PASSWORD_RESET
+    );
     if (existingOtp) {
-      throw new BadRequestException("OTP already sent to this email address. Please check your inbox or try again after 5 minutes.");
+      throw new BadRequestException(
+        "OTP already sent to this email address. Please check your inbox or try again after 5 minutes."
+      );
     }
 
-    const otp = this.generateOtp()
+    const otp = this.generateOtp();
 
     // Store OTP in Valkey (with 5 minutes TTL as configured in ValkeyService)
-    await this.valkeyService.storeOtp(email, otp, OtpType.PASSWORD_RESET, 5 * 60);
+    await this.valkeyService.storeOtp(
+      email,
+      otp,
+      OtpType.PASSWORD_RESET,
+      5 * 60
+    );
 
     // Send OTP via email
     await this.mailerService.sendPasswordResetOtpEmail(email, otp);
@@ -354,7 +397,10 @@ export class AuthService {
     }
 
     // Get stored OTP from Valkey
-    const storedOtpData = await this.valkeyService.getOtp(email, OtpType.PASSWORD_RESET);
+    const storedOtpData = await this.valkeyService.getOtp(
+      email,
+      OtpType.PASSWORD_RESET
+    );
 
     if (!storedOtpData) {
       throw new BadRequestException("OTP expired or not found");
@@ -390,7 +436,11 @@ export class AuthService {
 
     // Check if user is not a local user (cannot reset password for social login users)
     if (user.provider !== AuthProvider.LOCAL) {
-      throw new BadRequestException(`${user.provider.charAt(0).toUpperCase() + user.provider.slice(1)} users cannot reset password. Please use ${user.provider} login.`);
+      throw new BadRequestException(
+        `${
+          user.provider.charAt(0).toUpperCase() + user.provider.slice(1)
+        } users cannot reset password. Please use ${user.provider} login.`
+      );
     }
 
     // Update user's password
@@ -414,14 +464,24 @@ export class AuthService {
     }
 
     // Check if OTP already exists for this email
-    const existingOtp = await this.valkeyService.getOtp(email, OtpType.FIND_USERNAME);
+    const existingOtp = await this.valkeyService.getOtp(
+      email,
+      OtpType.FIND_USERNAME
+    );
     if (existingOtp) {
-      throw new BadRequestException("OTP already sent to this email address. Please check your inbox or try again after 5 minutes.");
+      throw new BadRequestException(
+        "OTP already sent to this email address. Please check your inbox or try again after 5 minutes."
+      );
     }
     const otp = this.generateOtp();
 
     // Store OTP in Valkey (with 5 minutes TTL as configured in ValkeyService)
-    await this.valkeyService.storeOtp(email, otp, OtpType.FIND_USERNAME, 5 * 60);
+    await this.valkeyService.storeOtp(
+      email,
+      otp,
+      OtpType.FIND_USERNAME,
+      5 * 60
+    );
 
     // Send OTP via email
     await this.mailerService.sendFindUsernameOtpEmail(email, otp);
@@ -445,7 +505,10 @@ export class AuthService {
     }
 
     // Get stored OTP from Valkey
-    const storedOtpData = await this.valkeyService.getOtp(email, OtpType.FIND_USERNAME);
+    const storedOtpData = await this.valkeyService.getOtp(
+      email,
+      OtpType.FIND_USERNAME
+    );
 
     if (!storedOtpData) {
       throw new BadRequestException("OTP expired or not found");
@@ -471,11 +534,11 @@ export class AuthService {
   async removeAccount(userId: string) {
     // Call the UsersService to remove the account
     const success = await this.usersService.removeAccount(userId);
-    
+
     if (success) {
       return {
         success: true,
-        message: "Account removed successfully"
+        message: "Account removed successfully",
       };
     }
   }

@@ -1,16 +1,23 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Relationship, RelationshipStatus } from '../entities/relationship.entity';
-import { Suggestion, SuggestionStatus, SuggestionSource } from '../entities/suggestion.entity';
-import { User } from '../../users/entities/user.entity';
-import { UsersService } from '../../users/users.service';
-import { UserLookupService } from './user-lookup.service';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import {
+  Relationship,
+  RelationshipStatus,
+} from "../entities/relationship.entity";
+import {
+  Suggestion,
+  SuggestionStatus,
+  SuggestionSource,
+} from "../entities/suggestion.entity";
+import { User } from "../../users/entities/user.entity";
+import { UsersService } from "../../users/users.service";
+import { UserLookupService } from "./user-lookup.service";
 
 import {
   SuggestionResponseDto,
-  GetSuggestionsDto
-} from '../dto/suggestion.dto';
+  GetSuggestionsDto,
+} from "../dto/suggestion.dto";
 
 @Injectable()
 export class SuggestionService {
@@ -20,7 +27,7 @@ export class SuggestionService {
     @InjectRepository(Suggestion)
     private suggestionRepository: Repository<Suggestion>,
     private usersService: UsersService,
-    private userLookupService: UserLookupService,
+    private userLookupService: UserLookupService
   ) {}
   /**
    * Lấy danh sách gợi ý kết bạn từ bảng suggestions
@@ -36,73 +43,85 @@ export class SuggestionService {
     const [suggestions, total] = await this.suggestionRepository.findAndCount({
       where: {
         userEmail,
-        status: SuggestionStatus.ACTIVE
+        status: SuggestionStatus.ACTIVE,
       },
-      relations: ['suggestedUser'],
+      relations: ["suggestedUser"],
       order: {
-        mutualFriendsCount: 'DESC',
-        createdAt: 'DESC'
+        mutualFriendsCount: "DESC",
+        createdAt: "DESC",
       },
       take: limit,
-      skip
+      skip,
     });
 
     // Transform data
-    const transformedSuggestions: SuggestionResponseDto[] = suggestions.map((suggestion) => ({
-      user: {
-        id: suggestion.suggestedUser.id,
-        email: suggestion.suggestedUser.email,
-        username: suggestion.suggestedUser.username,
-        name: suggestion.suggestedUser.name,
-        avatar: suggestion.suggestedUser.avatar,
-      },
-      mutualFriendsCount: suggestion.mutualFriendsCount,
-      mutualFriends: this.extractMutualFriends(suggestion.metadata),
-      reason: suggestion.reason || this.getReasonBySource(suggestion.source, suggestion.mutualFriendsCount)
-    }));
+    const transformedSuggestions: SuggestionResponseDto[] = suggestions.map(
+      (suggestion) => ({
+        user: {
+          id: suggestion.suggestedUser.id,
+          email: suggestion.suggestedUser.email,
+          username: suggestion.suggestedUser.username,
+          name: suggestion.suggestedUser.name,
+          avatar: suggestion.suggestedUser.avatar,
+        },
+        mutualFriendsCount: suggestion.mutualFriendsCount,
+        mutualFriends: this.extractMutualFriends(suggestion.metadata),
+        reason:
+          suggestion.reason ||
+          this.getReasonBySource(
+            suggestion.source,
+            suggestion.mutualFriendsCount
+          ),
+      })
+    );
 
     return {
       suggestions: transformedSuggestions,
-      total
+      total,
     };
   }
 
   /**
    * Helper method để extract mutual friends từ metadata
    */
-  private extractMutualFriends(metadata: any): Array<{id: string, name: string}> {
+  private extractMutualFriends(
+    metadata: any
+  ): Array<{ id: string; name: string }> {
     if (!metadata || !metadata.mutual_friends) {
       return [];
     }
-    
+
     // Nếu metadata chứa array of names, convert thành format cần thiết
     if (Array.isArray(metadata.mutual_friends)) {
       return metadata.mutual_friends.map((name: string, index: number) => ({
         id: `mutual-${index}`, // Temporary ID since we don't store actual IDs
-        name
+        name,
       }));
     }
-    
+
     return [];
   }
 
   /**
    * Helper method để generate reason based on source
    */
-  private getReasonBySource(source: SuggestionSource, mutualFriendsCount: number): string {
+  private getReasonBySource(
+    source: SuggestionSource,
+    mutualFriendsCount: number
+  ): string {
     switch (source) {
       case SuggestionSource.MUTUAL_FRIENDS:
-        return mutualFriendsCount > 1 
+        return mutualFriendsCount > 1
           ? `You have ${mutualFriendsCount} mutual friends`
-          : 'You have 1 mutual friend';
+          : "You have 1 mutual friend";
       case SuggestionSource.CONTACT:
-        return 'From your contacts';
+        return "From your contacts";
       case SuggestionSource.FACEBOOK:
-        return 'From Facebook friends';
+        return "From Facebook friends";
       case SuggestionSource.LINE:
-        return 'From LINE friends';
+        return "From LINE friends";
       default:
-        return 'Suggested for you';
+        return "Suggested for you";
     }
   }
 
@@ -114,15 +133,20 @@ export class SuggestionService {
     contacts: any[]
   ): Promise<{ created: number; skipped: number }> {
     const emails = contacts
-      .filter(contact => contact.email && this.userLookupService.isValidEmail(contact.email))
-      .map(contact => contact.email);
+      .filter(
+        (contact) =>
+          contact.email && this.userLookupService.isValidEmail(contact.email)
+      )
+      .map((contact) => contact.email);
 
     if (emails.length === 0) {
       return { created: 0, skipped: 0 };
     }
 
     // Tìm CashPop users từ contacts
-    const cashpopUsers = await this.userLookupService.findCashpopUsersByEmails(emails);
+    const cashpopUsers = await this.userLookupService.findCashpopUsersByEmails(
+      emails
+    );
 
     let created = 0;
     let skipped = 0;
@@ -138,8 +162,8 @@ export class SuggestionService {
       const existingRelationship = await this.relationshipRepository.findOne({
         where: [
           { userEmail, friendEmail: user.email },
-          { userEmail: user.email, friendEmail: userEmail }
-        ]
+          { userEmail: user.email, friendEmail: userEmail },
+        ],
       });
 
       if (existingRelationship) {
@@ -152,8 +176,8 @@ export class SuggestionService {
         where: {
           userEmail,
           suggestedUserEmail: user.email,
-          status: SuggestionStatus.ACTIVE
-        }
+          status: SuggestionStatus.ACTIVE,
+        },
       });
 
       if (existingSuggestion) {
@@ -163,19 +187,23 @@ export class SuggestionService {
 
       // Tạo suggestion mới
       try {
-        const mutualFriendsCount = await this.getMutualFriendsCount(userEmail, user.email);
+        const mutualFriendsCount = await this.getMutualFriendsCount(
+          userEmail,
+          user.email
+        );
 
         const suggestion = this.suggestionRepository.create({
           userEmail,
           suggestedUserEmail: user.email,
           source: SuggestionSource.CONTACT,
           status: SuggestionStatus.ACTIVE,
-          reason: 'Found in your contacts',
+          reason: "Found in your contacts",
           mutualFriendsCount,
           metadata: {
-            source_info: 'contact_sync',
-            contact_name: contacts.find(c => c.email === user.email)?.name || user.name
-          }
+            source_info: "contact_sync",
+            contact_name:
+              contacts.find((c) => c.email === user.email)?.name || user.name,
+          },
         });
 
         await this.suggestionRepository.save(suggestion);
@@ -192,7 +220,10 @@ export class SuggestionService {
   /**
    * Đếm số bạn chung giữa 2 users
    */
-  private async getMutualFriendsCount(userEmail: string, suggestedUserEmail: string): Promise<number> {
+  private async getMutualFriendsCount(
+    userEmail: string,
+    suggestedUserEmail: string
+  ): Promise<number> {
     const mutualFriendsQuery = `
       SELECT COUNT(DISTINCT r1.friend_email) as mutual_count
       FROM relationships r1
@@ -205,8 +236,11 @@ export class SuggestionService {
         AND r1.friend_email != $2
     `;
 
-    const result = await this.relationshipRepository.query(mutualFriendsQuery, [userEmail, suggestedUserEmail]);
-    return parseInt(result[0]?.mutual_count || '0');
+    const result = await this.relationshipRepository.query(mutualFriendsQuery, [
+      userEmail,
+      suggestedUserEmail,
+    ]);
+    return parseInt(result[0]?.mutual_count || "0");
   }
 
   /**
@@ -234,8 +268,8 @@ export class SuggestionService {
     const existingRelationship = await this.relationshipRepository.findOne({
       where: [
         { userEmail, friendEmail: searchEmail },
-        { userEmail: searchEmail, friendEmail: userEmail }
-      ]
+        { userEmail: searchEmail, friendEmail: userEmail },
+      ],
     });
 
     if (existingRelationship) {
@@ -247,8 +281,8 @@ export class SuggestionService {
       where: {
         userEmail,
         suggestedUserEmail: searchEmail,
-        status: SuggestionStatus.ACTIVE
-      }
+        status: SuggestionStatus.ACTIVE,
+      },
     });
 
     if (existingSuggestion) {
@@ -263,13 +297,16 @@ export class SuggestionService {
         },
         mutualFriendsCount: existingSuggestion.mutualFriendsCount,
         mutualFriends: this.extractMutualFriends(existingSuggestion.metadata),
-        reason: existingSuggestion.reason || 'Found by email search'
+        reason: existingSuggestion.reason || "Found by email search",
       };
     }
 
     // Tạo suggestion mới nếu chưa có
-    const newSuggestion = await this.createSuggestionByEmail(userEmail, searchEmail);
-    
+    const newSuggestion = await this.createSuggestionByEmail(
+      userEmail,
+      searchEmail
+    );
+
     if (!newSuggestion) {
       return null;
     }
@@ -285,7 +322,7 @@ export class SuggestionService {
       },
       mutualFriendsCount: newSuggestion.mutualFriendsCount,
       mutualFriends: this.extractMutualFriends(newSuggestion.metadata),
-      reason: newSuggestion.reason || 'Found by email search'
+      reason: newSuggestion.reason || "Found by email search",
     };
   }
 
@@ -298,25 +335,33 @@ export class SuggestionService {
   ): Promise<Suggestion | null> {
     try {
       // Tính mutual friends count
-      const mutualFriendsCount = await this.calculateMutualFriendsCount(userEmail, suggestedUserEmail);
-      
+      const mutualFriendsCount = await this.calculateMutualFriendsCount(
+        userEmail,
+        suggestedUserEmail
+      );
+
       const suggestion = this.suggestionRepository.create({
         userEmail,
         suggestedUserEmail,
-        source: mutualFriendsCount > 0 ? SuggestionSource.MUTUAL_FRIENDS : SuggestionSource.CONTACT,
+        source:
+          mutualFriendsCount > 0
+            ? SuggestionSource.MUTUAL_FRIENDS
+            : SuggestionSource.CONTACT,
         status: SuggestionStatus.ACTIVE,
-        reason: mutualFriendsCount > 0 
-          ? `You have ${mutualFriendsCount} mutual friends`
-          : 'Found by email search',
+        reason:
+          mutualFriendsCount > 0
+            ? `You have ${mutualFriendsCount} mutual friends`
+            : "Found by email search",
         mutualFriendsCount,
-        metadata: mutualFriendsCount > 0 
-          ? await this.getMutualFriendsMetadata(userEmail, suggestedUserEmail)
-          : { source_info: 'email_search' }
+        metadata:
+          mutualFriendsCount > 0
+            ? await this.getMutualFriendsMetadata(userEmail, suggestedUserEmail)
+            : { source_info: "email_search" },
       });
 
       return await this.suggestionRepository.save(suggestion);
     } catch (error) {
-      console.error('Error creating suggestion:', error);
+      console.error("Error creating suggestion:", error);
       return null;
     }
   }
@@ -324,7 +369,10 @@ export class SuggestionService {
   /**
    * Tính số lượng mutual friends
    */
-  private async calculateMutualFriendsCount(userEmail: string, suggestedUserEmail: string): Promise<number> {
+  private async calculateMutualFriendsCount(
+    userEmail: string,
+    suggestedUserEmail: string
+  ): Promise<number> {
     const query = `
       SELECT COUNT(DISTINCT mutual_friend.friend_email) as count
       FROM relationships user_rel
@@ -335,14 +383,20 @@ export class SuggestionService {
         AND suggested_rel.status = 'accepted'
     `;
 
-    const result = await this.relationshipRepository.query(query, [userEmail, suggestedUserEmail]);
-    return parseInt(result[0]?.count || '0');
+    const result = await this.relationshipRepository.query(query, [
+      userEmail,
+      suggestedUserEmail,
+    ]);
+    return parseInt(result[0]?.count || "0");
   }
 
   /**
    * Lấy thông tin mutual friends cho metadata
    */
-  private async getMutualFriendsMetadata(userEmail: string, suggestedUserEmail: string): Promise<any> {
+  private async getMutualFriendsMetadata(
+    userEmail: string,
+    suggestedUserEmail: string
+  ): Promise<any> {
     const query = `
       SELECT u.name
       FROM relationships user_rel
@@ -356,11 +410,14 @@ export class SuggestionService {
       LIMIT 3
     `;
 
-    const mutualFriends = await this.relationshipRepository.query(query, [userEmail, suggestedUserEmail]);
-    
+    const mutualFriends = await this.relationshipRepository.query(query, [
+      userEmail,
+      suggestedUserEmail,
+    ]);
+
     return {
       mutual_friends: mutualFriends.map((f: any) => f.name),
-      source_info: 'email_search'
+      source_info: "email_search",
     };
   }
 }

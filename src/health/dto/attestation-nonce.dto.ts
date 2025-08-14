@@ -29,7 +29,8 @@ export class VerifyAttestationDto {
   nonce: string;
 
   @ApiProperty({
-    description: "The attestation token from Play Integrity API (Android) or assertion from App Attest (iOS)",
+    description:
+      "The attestation token from Play Integrity API (Android) or assertion from App Attest (iOS)",
     example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ...",
   })
   @IsString()

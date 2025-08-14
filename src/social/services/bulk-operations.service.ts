@@ -1,9 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { Relationship, RelationshipStatus } from '../entities/relationship.entity';
-import { Suggestion, SuggestionStatus, SuggestionSource } from '../entities/suggestion.entity';
-import { User } from '../../users/entities/user.entity';
+import { Injectable, Logger } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, DataSource } from "typeorm";
+import {
+  Relationship,
+  RelationshipStatus,
+} from "../entities/relationship.entity";
+import {
+  Suggestion,
+  SuggestionStatus,
+  SuggestionSource,
+} from "../entities/suggestion.entity";
+import { User } from "../../users/entities/user.entity";
 
 /**
  * BulkOperationsService - Tối ưu hóa operations với bulk processing
@@ -18,7 +25,7 @@ export class BulkOperationsService {
     private readonly relationshipRepository: Repository<Relationship>,
     @InjectRepository(Suggestion)
     private readonly suggestionRepository: Repository<Suggestion>,
-    private readonly dataSource: DataSource,
+    private readonly dataSource: DataSource
   ) {}
 
   /**
@@ -47,24 +54,28 @@ export class BulkOperationsService {
       // Prepare bidirectional relationships
       for (const data of relationshipData) {
         // Primary relationship
-        relationshipsToCreate.push(manager.create(Relationship, {
-          userEmail: data.userEmail,
-          friendEmail: data.friendEmail,
-          status: RelationshipStatus.ACCEPTED,
-          initiatedBy: data.initiatedBy,
-          message: data.message,
-          acceptedAt: now,
-        }));
+        relationshipsToCreate.push(
+          manager.create(Relationship, {
+            userEmail: data.userEmail,
+            friendEmail: data.friendEmail,
+            status: RelationshipStatus.ACCEPTED,
+            initiatedBy: data.initiatedBy,
+            message: data.message,
+            acceptedAt: now,
+          })
+        );
 
         // Reverse relationship
-        relationshipsToCreate.push(manager.create(Relationship, {
-          userEmail: data.friendEmail,
-          friendEmail: data.userEmail,
-          status: RelationshipStatus.ACCEPTED,
-          initiatedBy: data.initiatedBy,
-          message: data.message,
-          acceptedAt: now,
-        }));
+        relationshipsToCreate.push(
+          manager.create(Relationship, {
+            userEmail: data.friendEmail,
+            friendEmail: data.userEmail,
+            status: RelationshipStatus.ACCEPTED,
+            initiatedBy: data.initiatedBy,
+            message: data.message,
+            acceptedAt: now,
+          })
+        );
       }
 
       try {
@@ -78,9 +89,11 @@ export class BulkOperationsService {
           .execute();
 
         created = relationshipData.length;
-        this.logger.log(`✅ Bulk created ${created} bidirectional relationships`);
+        this.logger.log(
+          `✅ Bulk created ${created} bidirectional relationships`
+        );
       } catch (error) {
-        this.logger.error('❌ Bulk relationship creation failed:', error);
+        this.logger.error("❌ Bulk relationship creation failed:", error);
         errors.push(`Bulk creation failed: ${error.message}`);
       }
     });
@@ -109,7 +122,7 @@ export class BulkOperationsService {
     let created = 0;
 
     try {
-      const suggestions = suggestionData.map(data => 
+      const suggestions = suggestionData.map((data) =>
         this.suggestionRepository.create({
           userEmail: data.userEmail,
           suggestedUserEmail: data.suggestedUserEmail,
@@ -132,7 +145,7 @@ export class BulkOperationsService {
       created = result.identifiers.length;
       this.logger.log(`✅ Bulk created ${created} suggestions`);
     } catch (error) {
-      this.logger.error('❌ Bulk suggestion creation failed:', error);
+      this.logger.error("❌ Bulk suggestion creation failed:", error);
       errors.push(`Bulk creation failed: ${error.message}`);
     }
 
@@ -151,17 +164,21 @@ export class BulkOperationsService {
     }
 
     const relationships = await this.relationshipRepository
-      .createQueryBuilder('relationship')
-      .where('relationship.userEmail = :userEmail', { userEmail })
-      .andWhere('relationship.friendEmail IN (:...friendEmails)', { friendEmails })
+      .createQueryBuilder("relationship")
+      .where("relationship.userEmail = :userEmail", { userEmail })
+      .andWhere("relationship.friendEmail IN (:...friendEmails)", {
+        friendEmails,
+      })
       .getMany();
 
     const relationshipMap = new Map<string, Relationship>();
-    relationships.forEach(rel => {
+    relationships.forEach((rel) => {
       relationshipMap.set(rel.friendEmail, rel);
     });
 
-    this.logger.debug(`🔍 Bulk checked ${friendEmails.length} relationships, found ${relationships.length} existing`);
+    this.logger.debug(
+      `🔍 Bulk checked ${friendEmails.length} relationships, found ${relationships.length} existing`
+    );
     return relationshipMap;
   }
 
@@ -177,18 +194,24 @@ export class BulkOperationsService {
     }
 
     const suggestions = await this.suggestionRepository
-      .createQueryBuilder('suggestion')
-      .where('suggestion.userEmail = :userEmail', { userEmail })
-      .andWhere('suggestion.suggestedUserEmail IN (:...suggestedEmails)', { suggestedEmails })
-      .andWhere('suggestion.status = :status', { status: SuggestionStatus.ACTIVE })
+      .createQueryBuilder("suggestion")
+      .where("suggestion.userEmail = :userEmail", { userEmail })
+      .andWhere("suggestion.suggestedUserEmail IN (:...suggestedEmails)", {
+        suggestedEmails,
+      })
+      .andWhere("suggestion.status = :status", {
+        status: SuggestionStatus.ACTIVE,
+      })
       .getMany();
 
     const suggestionMap = new Map<string, Suggestion>();
-    suggestions.forEach(sug => {
+    suggestions.forEach((sug) => {
       suggestionMap.set(sug.suggestedUserEmail, sug);
     });
 
-    this.logger.debug(`🔍 Bulk checked ${suggestedEmails.length} suggestions, found ${suggestions.length} existing`);
+    this.logger.debug(
+      `🔍 Bulk checked ${suggestedEmails.length} suggestions, found ${suggestions.length} existing`
+    );
     return suggestionMap;
   }
 
@@ -218,21 +241,26 @@ export class BulkOperationsService {
       GROUP BY r2.user_email
     `;
 
-    const results = await this.relationshipRepository.query(query, [userEmail, targetEmails]);
-    
+    const results = await this.relationshipRepository.query(query, [
+      userEmail,
+      targetEmails,
+    ]);
+
     const mutualCountMap = new Map<string, number>();
     results.forEach((row: any) => {
-      mutualCountMap.set(row.target_email, parseInt(row.mutual_count || '0'));
+      mutualCountMap.set(row.target_email, parseInt(row.mutual_count || "0"));
     });
 
     // Set 0 for emails không có mutual friends
-    targetEmails.forEach(email => {
+    targetEmails.forEach((email) => {
       if (!mutualCountMap.has(email)) {
         mutualCountMap.set(email, 0);
       }
     });
 
-    this.logger.debug(`🔍 Bulk calculated mutual friends for ${targetEmails.length} users`);
+    this.logger.debug(
+      `🔍 Bulk calculated mutual friends for ${targetEmails.length} users`
+    );
     return mutualCountMap;
   }
 
@@ -246,8 +274,8 @@ export class BulkOperationsService {
     const result = await this.suggestionRepository
       .createQueryBuilder()
       .delete()
-      .where('status = :status', { status: SuggestionStatus.DISMISSED })
-      .andWhere('updatedAt < :cutoffDate', { cutoffDate })
+      .where("status = :status", { status: SuggestionStatus.DISMISSED })
+      .andWhere("updatedAt < :cutoffDate", { cutoffDate })
       .execute();
 
     this.logger.log(`🧹 Cleaned up ${result.affected} expired suggestions`);
@@ -267,23 +295,27 @@ export class BulkOperationsService {
       totalRelationships,
       totalSuggestions,
       activeSuggestions,
-      avgMutualFriendsResult
+      avgMutualFriendsResult,
     ] = await Promise.all([
       this.relationshipRepository.count(),
       this.suggestionRepository.count(),
-      this.suggestionRepository.count({ where: { status: SuggestionStatus.ACTIVE } }),
+      this.suggestionRepository.count({
+        where: { status: SuggestionStatus.ACTIVE },
+      }),
       this.suggestionRepository
-        .createQueryBuilder('suggestion')
-        .select('AVG(suggestion.mutualFriendsCount)', 'avg')
-        .where('suggestion.status = :status', { status: SuggestionStatus.ACTIVE })
-        .getRawOne()
+        .createQueryBuilder("suggestion")
+        .select("AVG(suggestion.mutualFriendsCount)", "avg")
+        .where("suggestion.status = :status", {
+          status: SuggestionStatus.ACTIVE,
+        })
+        .getRawOne(),
     ]);
 
     return {
       totalRelationships,
       totalSuggestions,
       activeSuggestions,
-      avgMutualFriends: parseFloat(avgMutualFriendsResult?.avg || '0')
+      avgMutualFriends: parseFloat(avgMutualFriendsResult?.avg || "0"),
     };
   }
 }

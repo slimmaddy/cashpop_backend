@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { User } from '../../users/entities/user.entity';
-import { UsersService } from '../../users/users.service';
-import { UserLookupService } from './user-lookup.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { User } from "../../users/entities/user.entity";
+import { UsersService } from "../../users/users.service";
+import { UserLookupService } from "./user-lookup.service";
 
 /**
  * UserContextService - Centralize user context management và caching
@@ -16,7 +16,7 @@ export class UserContextService {
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly userLookupService: UserLookupService,
+    private readonly userLookupService: UserLookupService
   ) {}
 
   /**
@@ -24,12 +24,12 @@ export class UserContextService {
    */
   async getUserFromJWT(jwtPayload: any): Promise<User | null> {
     if (!jwtPayload?.userId) {
-      this.logger.warn('❌ No userId in JWT payload');
+      this.logger.warn("❌ No userId in JWT payload");
       return null;
     }
 
     const cacheKey = `jwt:${jwtPayload.userId}`;
-    
+
     // Check cache first
     const cachedUser = this.getCachedUser(cacheKey);
     if (cachedUser) {
@@ -56,7 +56,7 @@ export class UserContextService {
     if (!email) return null;
 
     const cacheKey = `email:${email}`;
-    
+
     // Check cache first
     const cachedUser = this.getCachedUser(cacheKey);
     if (cachedUser) {
@@ -94,8 +94,10 @@ export class UserContextService {
 
     // Batch fetch uncached users
     if (uncachedEmails.length > 0) {
-      const userMap = await this.userLookupService.getUsersByEmails(uncachedEmails);
-      
+      const userMap = await this.userLookupService.getUsersByEmails(
+        uncachedEmails
+      );
+
       // Cache the fetched users
       userMap.forEach((user, email) => {
         const cacheKey = `email:${email}`;
@@ -104,7 +106,11 @@ export class UserContextService {
       });
     }
 
-    this.logger.debug(`👥 Batch loaded ${emails.length} users: ${result.size} found, ${emails.length - result.size} not found`);
+    this.logger.debug(
+      `👥 Batch loaded ${emails.length} users: ${result.size} found, ${
+        emails.length - result.size
+      } not found`
+    );
     return result;
   }
 
@@ -124,7 +130,9 @@ export class UserContextService {
       this.cacheExpiry.delete(emailKey);
     }
 
-    this.logger.debug(`🗑️ Cache invalidated for userId: ${userId}, email: ${email}`);
+    this.logger.debug(
+      `🗑️ Cache invalidated for userId: ${userId}, email: ${email}`
+    );
   }
 
   /**
@@ -153,7 +161,7 @@ export class UserContextService {
   getCacheStats(): { size: number; hitRate: number } {
     return {
       size: this.userCache.size,
-      hitRate: 0 // TODO: Implement hit rate tracking
+      hitRate: 0, // TODO: Implement hit rate tracking
     };
   }
 

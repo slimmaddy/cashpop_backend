@@ -1,14 +1,14 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
-import { ContactInfo } from '../dto/syncing.dto';
+import { Injectable } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { User } from "../../users/entities/user.entity";
+import { ContactInfo } from "../dto/syncing.dto";
 
 @Injectable()
 export class UserLookupService {
   constructor(
     @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userRepository: Repository<User>
   ) {}
 
   /**
@@ -18,13 +18,15 @@ export class UserLookupService {
     if (emails.length === 0) return [];
 
     // Filter out empty emails and duplicates
-    const validEmails = [...new Set(emails.filter(email => email && email.trim()))];
-    
+    const validEmails = [
+      ...new Set(emails.filter((email) => email && email.trim())),
+    ];
+
     if (validEmails.length === 0) return [];
 
     return this.userRepository.find({
       where: { email: In(validEmails) },
-      select: ['id', 'email', 'name', 'username', 'avatar']
+      select: ["id", "email", "name", "username", "avatar"],
     });
   }
 
@@ -33,8 +35,8 @@ export class UserLookupService {
    */
   async findCashpopUsersFromContacts(contacts: ContactInfo[]): Promise<User[]> {
     const emails = contacts
-      .filter(contact => contact.email)
-      .map(contact => contact.email);
+      .filter((contact) => contact.email)
+      .map((contact) => contact.email);
 
     return this.findCashpopUsersByEmails(emails);
   }
@@ -46,7 +48,7 @@ export class UserLookupService {
     if (!email || !email.trim()) return false;
 
     const count = await this.userRepository.count({
-      where: { email: email.trim() }
+      where: { email: email.trim() },
     });
 
     return count > 0;
@@ -60,7 +62,7 @@ export class UserLookupService {
 
     return this.userRepository.findOne({
       where: { email: email.trim() },
-      select: ['id', 'email', 'name', 'username', 'avatar']
+      select: ["id", "email", "name", "username", "avatar"],
     });
   }
 
@@ -70,8 +72,8 @@ export class UserLookupService {
   async getUsersByEmails(emails: string[]): Promise<Map<string, User>> {
     const users = await this.findCashpopUsersByEmails(emails);
     const userMap = new Map<string, User>();
-    
-    users.forEach(user => {
+
+    users.forEach((user) => {
       userMap.set(user.email, user);
     });
 
@@ -82,8 +84,8 @@ export class UserLookupService {
    * Validate email format
    */
   isValidEmail(email: string): boolean {
-    if (!email || typeof email !== 'string') return false;
-    
+    if (!email || typeof email !== "string") return false;
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email.trim());
   }
@@ -92,8 +94,8 @@ export class UserLookupService {
    * Filter contacts với valid emails
    */
   filterContactsWithValidEmails(contacts: ContactInfo[]): ContactInfo[] {
-    return contacts.filter(contact => 
-      contact.email && this.isValidEmail(contact.email)
+    return contacts.filter(
+      (contact) => contact.email && this.isValidEmail(contact.email)
     );
   }
 }
