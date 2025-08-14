@@ -18,7 +18,11 @@ export enum RelationshipStatus {
 @Entity("relationships")
 @Index(["userEmail", "friendEmail"], { unique: true })
 @Index(["userEmail", "status"])
+@Index(["friendEmail", "status"])
 @Index(["status", "createdAt"])
+@Index(["userEmail", "status", "createdAt"])
+@Index(["friendEmail", "status", "createdAt"])
+@Index(["initiatedBy", "status"])
 export class Relationship {
   @PrimaryGeneratedColumn("uuid")
   id: string;

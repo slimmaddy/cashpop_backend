@@ -11,6 +11,14 @@ import {
   SuggestionSource,
 } from "../entities/suggestion.entity";
 import { User } from "../../users/entities/user.entity";
+import {
+  BulkSendFriendRequestDto,
+  BulkAcceptFriendRequestDto,
+  BulkRejectFriendRequestDto,
+  BulkOperationResponseDto,
+  BulkOperationResult
+} from "../dto/bulk-operations.dto";
+import { RelationshipService } from "./relationship.service";
 
 /**
  * BulkOperationsService - Tối ưu hóa operations với bulk processing
@@ -25,7 +33,8 @@ export class BulkOperationsService {
     private readonly relationshipRepository: Repository<Relationship>,
     @InjectRepository(Suggestion)
     private readonly suggestionRepository: Repository<Suggestion>,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly relationshipService: RelationshipService
   ) {}
 
   /**
@@ -283,6 +292,192 @@ export class BulkOperationsService {
   }
 
   /**
+   * ✅ BULK API: Send friend requests to multiple users
+   */
+  async bulkSendFriendRequests(
+    userEmail: string,
+    dto: BulkSendFriendRequestDto
+  ): Promise<BulkOperationResponseDto> {
+    this.logger.log(`🚀 Bulk sending ${dto.friendEmails.length} friend requests from ${userEmail}`);
+
+    const results: BulkOperationResult[] = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Process in parallel with concurrency limit
+    const concurrencyLimit = 5;
+    const chunks = this.chunkArray(dto.friendEmails, concurrencyLimit);
+
+    for (const chunk of chunks) {
+      const promises = chunk.map(async (friendEmail) => {
+        try {
+          const result = await this.relationshipService.sendFriendRequest(userEmail, {
+            friendEmail,
+            message: dto.message
+          });
+
+          const success: BulkOperationResult = {
+            email: friendEmail,
+            success: true,
+            message: "Friend request sent successfully"
+          };
+          
+          successCount++;
+          return success;
+        } catch (error) {
+          const failure: BulkOperationResult = {
+            email: friendEmail,
+            success: false,
+            message: "Failed to send friend request",
+            error: error.message || "Unknown error"
+          };
+          
+          failureCount++;
+          this.logger.warn(`Failed to send friend request to ${friendEmail}: ${error.message}`);
+          return failure;
+        }
+      });
+
+      const chunkResults = await Promise.all(promises);
+      results.push(...chunkResults);
+    }
+
+    const response: BulkOperationResponseDto = {
+      success: failureCount === 0,
+      message: `Bulk friend requests completed: ${successCount}/${dto.friendEmails.length} successful`,
+      successCount,
+      failureCount,
+      total: dto.friendEmails.length,
+      results
+    };
+
+    this.logger.log(`✅ Bulk send completed: ${successCount} success, ${failureCount} failed`);
+    return response;
+  }
+
+  /**
+   * ✅ BULK API: Accept multiple friend requests
+   */
+  async bulkAcceptFriendRequests(
+    userEmail: string,
+    dto: BulkAcceptFriendRequestDto
+  ): Promise<BulkOperationResponseDto> {
+    this.logger.log(`🚀 Bulk accepting ${dto.requestIds.length} friend requests for ${userEmail}`);
+
+    const results: BulkOperationResult[] = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Process in parallel with concurrency limit
+    const concurrencyLimit = 10;
+    const chunks = this.chunkArray(dto.requestIds, concurrencyLimit);
+
+    for (const chunk of chunks) {
+      const promises = chunk.map(async (requestId) => {
+        try {
+          const result = await this.relationshipService.acceptFriendRequest(userEmail, requestId);
+
+          const success: BulkOperationResult = {
+            requestId,
+            success: true,
+            message: "Friend request accepted successfully"
+          };
+          
+          successCount++;
+          return success;
+        } catch (error) {
+          const failure: BulkOperationResult = {
+            requestId,
+            success: false,
+            message: "Failed to accept friend request",
+            error: error.message || "Unknown error"
+          };
+          
+          failureCount++;
+          this.logger.warn(`Failed to accept friend request ${requestId}: ${error.message}`);
+          return failure;
+        }
+      });
+
+      const chunkResults = await Promise.all(promises);
+      results.push(...chunkResults);
+    }
+
+    const response: BulkOperationResponseDto = {
+      success: failureCount === 0,
+      message: `Bulk accept completed: ${successCount}/${dto.requestIds.length} successful`,
+      successCount,
+      failureCount,
+      total: dto.requestIds.length,
+      results
+    };
+
+    this.logger.log(`✅ Bulk accept completed: ${successCount} success, ${failureCount} failed`);
+    return response;
+  }
+
+  /**
+   * ✅ BULK API: Reject multiple friend requests
+   */
+  async bulkRejectFriendRequests(
+    userEmail: string,
+    dto: BulkRejectFriendRequestDto
+  ): Promise<BulkOperationResponseDto> {
+    this.logger.log(`🚀 Bulk rejecting ${dto.requestIds.length} friend requests for ${userEmail}`);
+
+    const results: BulkOperationResult[] = [];
+    let successCount = 0;
+    let failureCount = 0;
+
+    // Process in parallel with concurrency limit
+    const concurrencyLimit = 10;
+    const chunks = this.chunkArray(dto.requestIds, concurrencyLimit);
+
+    for (const chunk of chunks) {
+      const promises = chunk.map(async (requestId) => {
+        try {
+          const result = await this.relationshipService.rejectFriendRequest(userEmail, requestId);
+
+          const success: BulkOperationResult = {
+            requestId,
+            success: true,
+            message: "Friend request rejected successfully"
+          };
+          
+          successCount++;
+          return success;
+        } catch (error) {
+          const failure: BulkOperationResult = {
+            requestId,
+            success: false,
+            message: "Failed to reject friend request",
+            error: error.message || "Unknown error"
+          };
+          
+          failureCount++;
+          this.logger.warn(`Failed to reject friend request ${requestId}: ${error.message}`);
+          return failure;
+        }
+      });
+
+      const chunkResults = await Promise.all(promises);
+      results.push(...chunkResults);
+    }
+
+    const response: BulkOperationResponseDto = {
+      success: failureCount === 0,
+      message: `Bulk reject completed: ${successCount}/${dto.requestIds.length} successful`,
+      successCount,
+      failureCount,
+      total: dto.requestIds.length,
+      results
+    };
+
+    this.logger.log(`✅ Bulk reject completed: ${successCount} success, ${failureCount} failed`);
+    return response;
+  }
+
+  /**
    * Get performance stats
    */
   async getPerformanceStats(): Promise<{
@@ -317,5 +512,16 @@ export class BulkOperationsService {
       activeSuggestions,
       avgMutualFriends: parseFloat(avgMutualFriendsResult?.avg || "0"),
     };
+  }
+
+  /**
+   * Helper method để chia array thành chunks
+   */
+  private chunkArray<T>(array: T[], chunkSize: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
   }
 }

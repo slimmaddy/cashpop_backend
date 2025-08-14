@@ -141,6 +141,12 @@ export class SyncController extends BaseSocialController {
     success: boolean;
     message: string;
     history: any[];
+    stats?: {
+      totalSynced: number;
+      byPlatform: Record<string, number>;
+      recentSyncs: number;
+      avgSyncFrequency?: number;
+    };
   }> {
     this.logRequest("getSyncHistory", req);
 
@@ -151,15 +157,17 @@ export class SyncController extends BaseSocialController {
         success: false,
         message: "Không tìm thấy thông tin người dùng",
         history: [],
+        stats: undefined,
       };
     }
 
-    const history = await this.socialSyncService.getSyncHistory(user.email);
+    const historyResult = await this.socialSyncService.getSyncHistory(user.email);
 
     return {
       success: true,
       message: "Lấy lịch sử đồng bộ thành công",
-      history,
+      history: historyResult.history,
+      stats: historyResult.stats,
     };
   }
 }

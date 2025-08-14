@@ -96,6 +96,8 @@ export interface SyncResultDto {
       source: string;
     }>;
   };
+  executionTime?: number; // ✅ ADD: Optional execution time in milliseconds
+  testMode?: boolean; // ✅ ADD: Flag to indicate test mode
 }
 
 export class SyncContactsResponseDto {

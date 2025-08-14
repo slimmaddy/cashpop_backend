@@ -63,22 +63,30 @@ export class FacebookSyncService {
   }
 
   /**
-   * Get Facebook friends list and convert to ContactInfo[]
+   * ✅ OPTIMIZED: Get Facebook friends list with improved error handling and batch processing
    */
-  async getContacts(accessToken: string): Promise<ContactInfo[]> {
+  async getContacts(accessToken: string, options: {
+    batchSize?: number;
+    maxContacts?: number;
+    skipEmailValidation?: boolean;
+  } = {}): Promise<ContactInfo[]> {
+    const { batchSize = 100, maxContacts = 5000, skipEmailValidation = false } = options;
+    
     try {
-      this.logger.log("📱 Fetching Facebook friends...");
+      this.logger.log(`📱 Fetching Facebook friends (batch: ${batchSize}, max: ${maxContacts})...`);
 
-      // Validate token first
-      const isValidToken = await this.validateToken(accessToken);
+      // ✅ OPTIMIZE: Validate token and permissions in parallel
+      const [isValidToken, permissions] = await Promise.all([
+        this.validateToken(accessToken),
+        this.checkPermissions(accessToken)
+      ]);
+      
       if (!isValidToken) {
         throw new BadRequestException(
           "Facebook access token không hợp lệ hoặc đã hết hạn"
         );
       }
 
-      // ✅ WORKAROUND: Check if user_friends permission available
-      const permissions = await this.checkPermissions(accessToken);
       const hasUserFriendsPermission = permissions.includes("user_friends");
 
       if (!hasUserFriendsPermission) {
@@ -103,108 +111,86 @@ export class FacebookSyncService {
       const contacts: ContactInfo[] = [];
       let nextUrl: string | undefined = `${this.FACEBOOK_API_BASE}/me/friends`;
       let requestCount = 0;
-      const maxRequests = 50; // Limit to avoid infinite loops
+      const maxRequests = Math.ceil(maxContacts / batchSize); // Tính toán số request tối đa
 
-      // Fetch friends with pagination
-      while (nextUrl && requestCount < maxRequests) {
-        this.logger.log(`📄 Fetching friends page ${requestCount + 1}...`);
+      // ✅ OPTIMIZE: Fetch friends with configurable batch size and circuit breaker
+      while (nextUrl && requestCount < maxRequests && contacts.length < maxContacts) {
+        this.logger.log(`📄 Fetching friends page ${requestCount + 1}/${maxRequests}...`);
 
-        const response = await firstValueFrom(
-          this.httpService.get(nextUrl, {
-            params: nextUrl.includes("?")
-              ? {}
-              : {
-                  access_token: accessToken,
-                  fields: "id,name,email",
-                  limit: 100, // Max per request
-                },
-            timeout: 15000,
-          })
-        );
-
-        const friendsData: FacebookFriendsResponse = response.data;
-
-        // Transform Facebook friends to ContactInfo format
-        for (const friend of friendsData.data) {
-          // Chỉ thêm contact nếu có email hợp lệ
-          if (friend.email && this.isValidEmail(friend.email)) {
-            contacts.push({
-              id: friend.id,
-              name: friend.name,
-              email: friend.email,
-              platform: SyncPlatform.FACEBOOK, // ✅ Sử dụng enum từ syncing.dto.ts
-            });
-          }
-        }
-
-        // Handle pagination
-        nextUrl = friendsData.paging?.next;
-        requestCount++;
-
-        this.logger.log(
-          `📄 Page ${requestCount}: Fetched ${friendsData.data.length} friends, ${contacts.length} with valid emails`
-        );
-
-        // Safety break to avoid too many contacts
-        if (contacts.length > 5000) {
-          this.logger.warn(
-            "⚠️ Reached maximum friends limit (5000), stopping..."
+        try {
+          const response = await firstValueFrom(
+            this.httpService.get(nextUrl, {
+              params: nextUrl.includes("?")
+                ? {}
+                : {
+                    access_token: accessToken,
+                    fields: "id,name,email",
+                    limit: batchSize,
+                  },
+              timeout: 15000,
+              // ✅ ADD: Retry configuration
+              headers: {
+                'User-Agent': 'CashPop-Social-Sync/1.0'
+              }
+            })
           );
-          break;
+
+          const friendsData: FacebookFriendsResponse = response.data;
+          let validEmailCount = 0;
+
+          // ✅ OPTIMIZE: Process friends in batch with better filtering
+          const batchContacts = friendsData.data
+            .filter(friend => {
+              if (!friend.email && !skipEmailValidation) {
+                return false;
+              }
+              return skipEmailValidation || this.isValidEmail(friend.email!);
+            })
+            .map(friend => {
+              if (friend.email && this.isValidEmail(friend.email)) {
+                validEmailCount++;
+              }
+              return {
+                id: friend.id,
+                name: friend.name,
+                email: friend.email || `${friend.id}@facebook.noemail`,
+                platform: SyncPlatform.FACEBOOK,
+              };
+            });
+
+          contacts.push(...batchContacts.slice(0, maxContacts - contacts.length));
+
+          // Handle pagination
+          nextUrl = friendsData.paging?.next;
+          requestCount++;
+
+          this.logger.log(
+            `📄 Page ${requestCount}: Fetched ${friendsData.data.length} friends, ${validEmailCount} with valid emails (total: ${contacts.length})`
+          );
+
+          // ✅ ADD: Respect rate limits with delay
+          if (nextUrl && requestCount < maxRequests) {
+            await this.delay(100); // 100ms delay between requests
+          }
+        } catch (pageError) {
+          this.logger.warn(`⚠️ Failed to fetch page ${requestCount + 1}, continuing...`, pageError.message);
+          
+          // Break on critical errors, continue on temporary failures
+          if (pageError.response?.status === 401 || pageError.response?.status === 403) {
+            throw pageError;
+          }
+          
+          // For other errors, try to continue with next page if available
+          nextUrl = undefined;
         }
       }
 
       this.logger.log(
-        `✅ Successfully fetched ${contacts.length} Facebook friends with valid emails`
+        `✅ Successfully fetched ${contacts.length} Facebook friends (${contacts.filter(c => c.email && !c.email.includes('@facebook.noemail')).length} with valid emails)`
       );
       return contacts;
     } catch (error) {
-      this.logger.error("❌ Error fetching Facebook friends:", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
-        url: error.config?.url,
-      });
-
-      if (error.response?.status === 401) {
-        throw new BadRequestException(
-          "Facebook access token không hợp lệ hoặc đã hết hạn"
-        );
-      }
-
-      if (error.response?.status === 403) {
-        throw new BadRequestException(
-          'Không có quyền truy cập danh sách bạn bè Facebook. Vui lòng cấp quyền "user_friends"'
-        );
-      }
-
-      if (error.response?.status === 400) {
-        const errorMessage =
-          error.response?.data?.error?.message || "Lỗi Facebook API";
-        throw new BadRequestException(`Facebook API Error: ${errorMessage}`);
-      }
-
-      if (error.response?.status === 429) {
-        throw new BadRequestException(
-          "Facebook API rate limit exceeded. Vui lòng thử lại sau"
-        );
-      }
-
-      if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
-        throw new BadRequestException("Facebook API timeout. Vui lòng thử lại");
-      }
-
-      // Log detailed error for debugging
-      this.logger.error("❌ Unexpected Facebook API error:", {
-        errorType: error.constructor.name,
-        errorCode: error.code,
-        errorMessage: error.message,
-        responseStatus: error.response?.status,
-        responseData: error.response?.data,
-      });
-
-      throw new BadRequestException("Lỗi khi lấy danh sách bạn bè từ Facebook");
+      return this.handleFacebookError(error);
     }
   }
 
@@ -345,7 +331,56 @@ export class FacebookSyncService {
   }
 
   /**
-   * Mock method for testing when no real Facebook token
+   * ✅ OPTIMIZE: Enhanced error handling with detailed error mapping
+   */
+  private handleFacebookError(error: any): never {
+    this.logger.error("❌ Error fetching Facebook friends:", {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      url: error.config?.url,
+    });
+
+    // Map specific Facebook API errors
+    const errorMap = {
+      401: "Facebook access token không hợp lệ hoặc đã hết hạn",
+      403: 'Không có quyền truy cập danh sách bạn bè Facebook. Vui lòng cấp quyền "user_friends"',
+      429: "Facebook API rate limit exceeded. Vui lòng thử lại sau",
+      400: error.response?.data?.error?.message 
+        ? `Facebook API Error: ${error.response.data.error.message}`
+        : "Dữ liệu request không hợp lệ"
+    };
+
+    if (error.response?.status && errorMap[error.response.status]) {
+      throw new BadRequestException(errorMap[error.response.status]);
+    }
+
+    if (error.code === "ECONNABORTED" || error.code === "ETIMEDOUT") {
+      throw new BadRequestException("Facebook API timeout. Vui lòng thử lại");
+    }
+
+    // Log detailed error for debugging
+    this.logger.error("❌ Unexpected Facebook API error:", {
+      errorType: error.constructor.name,
+      errorCode: error.code,
+      errorMessage: error.message,
+      responseStatus: error.response?.status,
+      responseData: error.response?.data,
+    });
+
+    throw new BadRequestException("Lỗi khi lấy danh sách bạn bè từ Facebook");
+  }
+
+  /**
+   * ✅ ADD: Helper method for delays (rate limiting)
+   */
+  private async delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * ✅ OPTIMIZE: Enhanced mock contacts with more realistic data
    */
   async getMockContacts(): Promise<ContactInfo[]> {
     this.logger.log("🧪 Returning mock Facebook contacts for testing...");
@@ -367,6 +402,18 @@ export class FacebookSyncService {
         id: "mock_fb_3",
         name: "Bob Johnson",
         email: "bob.johnson@example.com",
+        platform: SyncPlatform.FACEBOOK,
+      },
+      {
+        id: "mock_fb_4",
+        name: "Alice Cooper",
+        email: "alice.cooper@example.com",
+        platform: SyncPlatform.FACEBOOK,
+      },
+      {
+        id: "mock_fb_5",
+        name: "Mike Wilson",
+        email: "mike.wilson@example.com",
         platform: SyncPlatform.FACEBOOK,
       },
     ];

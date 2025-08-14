@@ -1,22 +1,26 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
 import { User } from "../../users/entities/user.entity";
 import { UsersService } from "../../users/users.service";
-import { UserLookupService } from "./user-lookup.service";
+import { ContactInfo } from "../dto/syncing.dto";
 
 /**
- * UserContextService - Centralize user context management và caching
- * Giải quyết vấn đề duplicate user lookups trong controllers
+ * UserContextService - Consolidated user context management với caching
+ * Combines UserLookupService functionality để giảm duplicate code
  */
 @Injectable()
 export class UserContextService {
   private readonly logger = new Logger(UserContextService.name);
   private readonly userCache = new Map<string, User>();
   private readonly cacheExpiry = new Map<string, number>();
+  private readonly hitStats = { hits: 0, misses: 0 };
   private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly userLookupService: UserLookupService
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>
   ) {}
 
   /**
@@ -53,18 +57,24 @@ export class UserContextService {
    * Lấy user theo email với caching
    */
   async getUserByEmail(email: string): Promise<User | null> {
-    if (!email) return null;
+    if (!email || !email.trim()) return null;
 
     const cacheKey = `email:${email}`;
 
     // Check cache first
     const cachedUser = this.getCachedUser(cacheKey);
     if (cachedUser) {
+      this.hitStats.hits++;
       return cachedUser;
     }
 
-    // Fetch from UserLookupService
-    const user = await this.userLookupService.getUserByEmail(email);
+    // Fetch from database
+    this.hitStats.misses++;
+    const user = await this.userRepository.findOne({
+      where: { email: email.trim() },
+      select: ["id", "email", "name", "username", "avatar"],
+    });
+    
     if (user) {
       this.setCachedUser(cacheKey, user);
     }
@@ -78,37 +88,44 @@ export class UserContextService {
   async getUsersByEmails(emails: string[]): Promise<Map<string, User>> {
     if (emails.length === 0) return new Map();
 
+    // Filter out empty emails and duplicates
+    const validEmails = [...new Set(emails.filter(email => email && email.trim()))];
+    if (validEmails.length === 0) return new Map();
+
     const result = new Map<string, User>();
     const uncachedEmails: string[] = [];
 
     // Check cache for each email
-    for (const email of emails) {
+    for (const email of validEmails) {
       const cacheKey = `email:${email}`;
       const cachedUser = this.getCachedUser(cacheKey);
       if (cachedUser) {
+        this.hitStats.hits++;
         result.set(email, cachedUser);
       } else {
+        this.hitStats.misses++;
         uncachedEmails.push(email);
       }
     }
 
     // Batch fetch uncached users
     if (uncachedEmails.length > 0) {
-      const userMap = await this.userLookupService.getUsersByEmails(
-        uncachedEmails
-      );
+      const users = await this.userRepository.find({
+        where: { email: In(uncachedEmails) },
+        select: ["id", "email", "name", "username", "avatar"],
+      });
 
       // Cache the fetched users
-      userMap.forEach((user, email) => {
-        const cacheKey = `email:${email}`;
+      users.forEach(user => {
+        const cacheKey = `email:${user.email}`;
         this.setCachedUser(cacheKey, user);
-        result.set(email, user);
+        result.set(user.email, user);
       });
     }
 
     this.logger.debug(
-      `👥 Batch loaded ${emails.length} users: ${result.size} found, ${
-        emails.length - result.size
+      `👥 Batch loaded ${validEmails.length} users: ${result.size} found, ${
+        validEmails.length - result.size
       } not found`
     );
     return result;
@@ -156,12 +173,61 @@ export class UserContextService {
   }
 
   /**
-   * Get cache stats
+   * ✅ CONSOLIDATED: Tìm CashPop users từ danh sách emails
    */
-  getCacheStats(): { size: number; hitRate: number } {
+  async findCashpopUsersByEmails(emails: string[]): Promise<User[]> {
+    const userMap = await this.getUsersByEmails(emails);
+    return Array.from(userMap.values());
+  }
+
+  /**
+   * ✅ CONSOLIDATED: Tìm CashPop users từ danh sách contacts  
+   */
+  async findCashpopUsersFromContacts(contacts: ContactInfo[]): Promise<User[]> {
+    const emails = contacts
+      .filter((contact) => contact.email)
+      .map((contact) => contact.email);
+
+    return this.findCashpopUsersByEmails(emails);
+  }
+
+  /**
+   * ✅ CONSOLIDATED: Kiểm tra user có tồn tại theo email
+   */
+  async userExistsByEmail(email: string): Promise<boolean> {
+    if (!email || !email.trim()) return false;
+
+    // Try cache first
+    const user = await this.getUserByEmail(email);
+    return user !== null;
+  }
+
+  /**
+   * Get cache stats with hit rate
+   */
+  getCacheStats(): { 
+    size: number; 
+    hitRate: number; 
+    hits: number; 
+    misses: number;
+    expiredEntries: number;
+  } {
+    const total = this.hitStats.hits + this.hitStats.misses;
+    const hitRate = total > 0 ? (this.hitStats.hits / total) * 100 : 0;
+    
+    // Count expired entries
+    const now = Date.now();
+    let expiredEntries = 0;
+    for (const expiry of this.cacheExpiry.values()) {
+      if (now > expiry) expiredEntries++;
+    }
+
     return {
       size: this.userCache.size,
-      hitRate: 0, // TODO: Implement hit rate tracking
+      hitRate: Math.round(hitRate * 100) / 100,
+      hits: this.hitStats.hits,
+      misses: this.hitStats.misses,
+      expiredEntries
     };
   }
 

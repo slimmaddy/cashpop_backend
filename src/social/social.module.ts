@@ -14,8 +14,10 @@ import { SuggestionService } from "./services/suggestion.service";
 import { SocialSyncService } from "./services/social-sync.service";
 import { FacebookSyncService } from "./services/syncing-facebook.service";
 import { LineSyncService } from "./services/syncing-line.service";
-import { UserLookupService } from "./services/user-lookup.service";
 import { UserContextService } from "./services/user-context.service";
+
+// Repositories
+import { RelationshipRepository } from "./repositories/relationship.repository";
 
 // Controllers
 import { RelationshipController } from "./controllers/relationship.controller";
@@ -66,8 +68,8 @@ import { SyncController } from "./controllers/sync.controller";
     SocialSyncService, // Service cho sync contacts
     FacebookSyncService, // Service cho Facebook integration
     LineSyncService, // Service cho LINE integration
-    UserLookupService, // Service cho user lookup utilities
-    UserContextService, // Service cho user context management và caching
+    UserContextService, // ✅ CONSOLIDATED: Service cho user context management, lookup và caching
+    RelationshipRepository, // ✅ CUSTOM: Repository với optimized queries
   ],
   exports: [
     RelationshipService, // Export để các module khác có thể sử dụng nếu cần
