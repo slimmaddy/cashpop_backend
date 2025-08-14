@@ -38,6 +38,12 @@ import { FindUsernameVerifyOtpDto, FindUsernameVerifyOtpResponseDto } from "./dt
 import {LogoutResponseDto} from "./dto/logout.dto";
 import {TokensResponseDto} from "./dto/tokens-response.dto";
 import { LineAuthGuard } from "./guards/line-auth.guard";
+import {
+  InitiatePhoneVerificationDto,
+  VerifyPhoneOtpDto,
+  PhoneVerificationResponseDto,
+  PhoneVerificationStatusDto,
+} from "./dto/phone-verification.dto";
 
 @ApiTags("Authentication")
 @Controller("auth")
@@ -287,5 +293,95 @@ export class AuthController {
   @ApiResponse({ status: 500, description: "Internal server error" })
   async removeAccount(@Req() req) {
     return this.authService.removeAccount(req.user.userId);
+  }
+
+  // ==================== PHONE VERIFICATION ENDPOINTS ====================
+
+  @Get("phone-verification/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get current phone verification status',
+    description: 'Retrieve the current phone verification status for the authenticated user.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone verification status retrieved successfully',
+    type: PhoneVerificationStatusDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found'
+  })
+  async getPhoneVerificationStatus(@Req() req): Promise<PhoneVerificationStatusDto> {
+    return this.authService.getPhoneVerificationStatus(req.user.userId);
+  }
+
+  @Post("phone-verification/initiate")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Initiate phone identity verification for logged-in user',
+    description: 'Start the phone verification process by providing personal information and phone number. An OTP will be sent via SMS.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: PhoneVerificationResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or invalid data'
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - phone number or residence number already in use'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  async initiatePhoneVerification(
+    @Req() req,
+    @Body() dto: InitiatePhoneVerificationDto,
+  ): Promise<PhoneVerificationResponseDto> {
+    return this.authService.initiatePhoneVerification(req.user.userId, dto);
+  }
+
+  @Post("phone-verification/verify-otp")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify OTP and complete phone verification',
+    description: 'Complete the phone verification process by providing the OTP received via SMS.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone verification completed successfully',
+    type: PhoneVerificationResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid OTP or verification error'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification session not found'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  async verifyPhoneOtp(
+    @Req() req,
+    @Body() dto: VerifyPhoneOtpDto,
+  ): Promise<PhoneVerificationResponseDto> {
+    return this.authService.verifyPhoneOtp(req.user.userId, dto);
   }
 }

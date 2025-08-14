@@ -32,10 +32,10 @@ export class Suggestion {
     @PrimaryGeneratedColumn('uuid')
     id: string
 
-    @Column({ name: 'userEmail' })
+    @Column()
     userEmail: string
 
-    @Column({ name: 'suggestedUserEmail' })
+    @Column()
     suggestedUserEmail: string
 
     @Column({
@@ -55,19 +55,19 @@ export class Suggestion {
     @Column({ type: 'text', nullable: true })
     reason: string; // "You have 3 mutual friends"
 
-    @Column({ name: 'mutualFriendsCount', type: 'int', default: 0 })
+    @Column({ type: 'int', default: 0 })
     mutualFriendsCount: number;
 
     @Column({ type: 'jsonb', nullable: true })
     metadata: any; // Thông tin thêm (platform data, etc.)
 
-    @Column({ name: 'dismissedAt', type: 'timestamp', nullable: true })
+    @Column({ type: 'timestamp', nullable: true })
     dismissedAt: Date;
 
-    @CreateDateColumn({ name: 'createdAt' })
+    @CreateDateColumn()
     createdAt: Date
 
-    @UpdateDateColumn({ name: 'updatedAt' })
+    @UpdateDateColumn()
     updatedAt: Date;
 
     // Relations

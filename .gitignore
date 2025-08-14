@@ -59,3 +59,4 @@ line-sync-test-data.sql
 line-sync-unit-test-plan.md
 migration-snake-to-camel-case.sql
 create_relationships_test_data.sql
+add-phone-verification-fields.sql

@@ -4,24 +4,44 @@ import {
   ConflictException,
   BadRequestException,
   NotFoundException,
+  Logger,
 } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, LessThan } from "typeorm";
 import { ConfigService } from "@nestjs/config";
+import * as bcrypt from "bcrypt";
 import { UsersService } from "../users/users.service";
 import { CreateUserDto } from "../users/dto/create-user.dto";
 import { AuthProvider } from "../users/entities/user.entity";
 import { ValkeyService, OtpType } from "../services/valkey.service";
 import { MailerService } from "../services/mailer.service";
+import { SmsService } from "../services/sms.service";
 import { TokenService } from "./token.service";
-import { access } from "fs";
+import { PhoneVerificationSession } from "./entities/phone-verification-session.entity";
+import { ResidenceRegistrationValidator } from "./validators/residence-registration.validator";
+import {
+  InitiatePhoneVerificationDto,
+  VerifyPhoneOtpDto,
+  PhoneVerificationResponseDto,
+  PhoneVerificationStatusDto,
+} from "./dto/phone-verification.dto";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+  private readonly OTP_EXPIRY_MINUTES = 5;
+  private readonly MAX_ATTEMPTS = 3;
+  private readonly RATE_LIMIT_MINUTES = 60;
+
   constructor(
     private usersService: UsersService,
     private valkeyService: ValkeyService,
     private mailerService: MailerService,
+    private smsService: SmsService,
     private tokenService: TokenService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    @InjectRepository(PhoneVerificationSession)
+    private sessionRepository: Repository<PhoneVerificationSession>
   ) {}
 
   private generateOtp() {
@@ -478,5 +498,320 @@ export class AuthService {
         message: "Account removed successfully"
       };
     }
+  }
+
+  // ==================== PHONE VERIFICATION METHODS ====================
+
+  /**
+   * Initiate phone verification process
+   */
+  async initiatePhoneVerification(
+    userId: string,
+    dto: InitiatePhoneVerificationDto
+  ): Promise<PhoneVerificationResponseDto> {
+    try {
+      // 1. Validate residence registration number
+      const residenceValidation = ResidenceRegistrationValidator.validate(
+        dto.residencePrefix,
+        dto.residenceSuffix
+      );
+
+      if (!residenceValidation.valid) {
+        throw new BadRequestException(residenceValidation.message);
+      }
+
+      // 2. Check rate limiting
+      await this.checkPhoneVerificationRateLimit(userId, dto.phoneNumber);
+
+      // 3. Combine and hash residence number
+      const fullResidenceNumber = dto.residencePrefix + dto.residenceSuffix;
+      const hashedResidence = await this.hashResidenceNumber(fullResidenceNumber);
+
+      // 4. Check uniqueness
+      await this.checkPhoneUniqueness(userId, dto.phoneNumber, hashedResidence);
+
+      // 5. Clean up expired sessions
+      await this.cleanupExpiredPhoneSessions();
+
+      // 6. Generate OTP and create session
+      const otp = this.smsService.generateOtp();
+      const hashedOtp = await bcrypt.hash(otp, 10);
+
+      const session = await this.createPhoneVerificationSession({
+        userId,
+        phoneNumber: dto.phoneNumber,
+        phoneCarrier: dto.phoneCarrier,
+        residencePrefix: dto.residencePrefix,
+        residenceNumberHash: hashedResidence,
+        username: dto.username,
+        hashedOtp
+      });
+
+      // 7. Send SMS
+      const smsResult = await this.smsService.sendOtp(
+        dto.phoneNumber,
+        otp,
+        dto.phoneCarrier
+      );
+
+      if (!smsResult) {
+        // Clean up session if SMS failed
+        await this.sessionRepository.delete(session.id);
+        throw new BadRequestException('Không thể gửi SMS. Vui lòng thử lại sau.');
+      }
+
+      // 8. Log success (without sensitive data)
+      this.logSecurePhoneOperation('Phone verification initiated', {
+        userId,
+        phoneNumber: this.maskPhoneNumber(dto.phoneNumber),
+        phoneCarrier: dto.phoneCarrier,
+        sessionId: session.id
+      });
+
+      return {
+        success: true,
+        message: 'OTP đã được gửi đến số điện thoại',
+        sessionId: session.id,
+        expiresAt: session.expiresAt,
+        maskedPhone: this.maskPhoneNumber(dto.phoneNumber)
+      };
+
+    } catch (error) {
+      this.logger.error(`Phone verification initiation failed: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify OTP and complete phone verification
+   */
+  async verifyPhoneOtp(
+    userId: string,
+    dto: VerifyPhoneOtpDto
+  ): Promise<PhoneVerificationResponseDto> {
+    try {
+      // 1. Find and validate session
+      const session = await this.sessionRepository.findOne({
+        where: {
+          id: dto.sessionId,
+          userId
+        }
+      });
+
+      if (!session) {
+        throw new NotFoundException('Phiên xác thực không tồn tại hoặc đã hết hạn');
+      }
+
+      // 2. Check expiration
+      if (new Date() > session.expiresAt) {
+        await this.sessionRepository.delete(session.id);
+        throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.');
+      }
+
+      // 3. Check attempts
+      if (session.attempts >= this.MAX_ATTEMPTS) {
+        await this.sessionRepository.delete(session.id);
+        throw new BadRequestException('Đã vượt quá số lần thử. Vui lòng yêu cầu mã mới.');
+      }
+
+      // 4. Verify OTP
+      const isOtpValid = await bcrypt.compare(dto.otp, session.otp);
+
+      if (!isOtpValid) {
+        // Increment attempts
+        await this.sessionRepository.update(session.id, {
+          attempts: session.attempts + 1
+        });
+
+        const remainingAttempts = this.MAX_ATTEMPTS - session.attempts - 1;
+        throw new BadRequestException(
+          `Mã OTP không chính xác. Còn lại ${remainingAttempts} lần thử.`
+        );
+      }
+
+      // 5. Update user with verified phone info
+      await this.updateUserPhoneInfo(userId, session);
+
+      // 6. Clean up session
+      await this.sessionRepository.delete(session.id);
+
+      // 7. Log success
+      this.logSecurePhoneOperation('Phone verification completed', {
+        userId,
+        phoneNumber: this.maskPhoneNumber(session.phoneNumber),
+        phoneCarrier: session.phoneCarrier
+      });
+
+      return {
+        success: true,
+        message: 'Xác thực số điện thoại thành công'
+      };
+
+    } catch (error) {
+      this.logger.error(`Phone OTP verification failed: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * Get phone verification status for user
+   */
+  async getPhoneVerificationStatus(userId: string): Promise<PhoneVerificationStatusDto> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
+
+    return {
+      phoneVerified: user.phoneVerified || false,
+      phoneNumber: user.phoneNumber,
+      phoneCarrier: user.phoneCarrier,
+      identityVerified: user.identityVerified || false,
+      phoneVerifiedAt: user.phoneVerifiedAt
+    };
+  }
+
+  // ==================== PHONE VERIFICATION HELPER METHODS ====================
+
+  /**
+   * Check rate limiting for phone verification
+   */
+  private async checkPhoneVerificationRateLimit(userId: string, phoneNumber: string): Promise<void> {
+    const rateLimitKey = `phone_verify_rate:${userId}:${phoneNumber}`;
+    const attempts = await this.valkeyService.get(rateLimitKey);
+
+    if (attempts && parseInt(attempts) >= 3) {
+      throw new BadRequestException(
+        `Đã vượt quá giới hạn yêu cầu. Vui lòng thử lại sau ${this.RATE_LIMIT_MINUTES} phút.`
+      );
+    }
+
+    // Increment attempts
+    const currentAttempts = attempts ? parseInt(attempts) + 1 : 1;
+    await this.valkeyService.setex(
+      rateLimitKey,
+      this.RATE_LIMIT_MINUTES * 60,
+      currentAttempts.toString()
+    );
+  }
+
+  /**
+   * Check phone number and residence number uniqueness
+   */
+  private async checkPhoneUniqueness(
+    userId: string,
+    phoneNumber: string,
+    hashedResidence: string
+  ): Promise<void> {
+    // Check phone number uniqueness
+    const existingPhoneUser = await this.usersService.findByPhoneNumber(phoneNumber);
+
+    if (existingPhoneUser && existingPhoneUser.id !== userId) {
+      throw new ConflictException('Số điện thoại đã được sử dụng bởi người dùng khác');
+    }
+
+    // Check residence number uniqueness
+    const existingResidenceUser = await this.usersService.findByResidenceNumber(hashedResidence);
+
+    if (existingResidenceUser && existingResidenceUser.id !== userId) {
+      throw new ConflictException('Số đăng ký cư trú đã được sử dụng bởi người dùng khác');
+    }
+  }
+
+  /**
+   * Create verification session
+   */
+  private async createPhoneVerificationSession(data: {
+    userId: string;
+    phoneNumber: string;
+    phoneCarrier: string;
+    residencePrefix: string;
+    residenceNumberHash: string;
+    username: string;
+    hashedOtp: string;
+  }): Promise<PhoneVerificationSession> {
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + this.OTP_EXPIRY_MINUTES);
+
+    const session = this.sessionRepository.create({
+      userId: data.userId,
+      phoneNumber: data.phoneNumber,
+      otp: data.hashedOtp,
+      expiresAt,
+      attempts: 0,
+      residenceNumberHash: data.residenceNumberHash,
+      residencePrefix: data.residencePrefix,
+      phoneCarrier: data.phoneCarrier,
+      username: data.username
+    });
+
+    return await this.sessionRepository.save(session);
+  }
+
+  /**
+   * Update user with verified phone information
+   */
+  private async updateUserPhoneInfo(
+    userId: string,
+    session: PhoneVerificationSession
+  ): Promise<void> {
+    await this.usersService.updatePhoneVerification(userId, {
+      phoneNumber: session.phoneNumber,
+      phoneCarrier: session.phoneCarrier,
+      phoneVerified: true,
+      phoneVerifiedAt: new Date(),
+      residenceRegistrationNumber: session.residenceNumberHash,
+      residenceRegistrationPrefix: session.residencePrefix,
+      identityVerified: true
+    });
+  }
+
+  /**
+   * Clean up expired sessions
+   */
+  private async cleanupExpiredPhoneSessions(): Promise<void> {
+    try {
+      const result = await this.sessionRepository.delete({
+        expiresAt: LessThan(new Date())
+      });
+
+      if (result.affected && result.affected > 0) {
+        this.logger.log(`Cleaned up ${result.affected} expired phone verification sessions`);
+      }
+    } catch (error) {
+      this.logger.error('Failed to cleanup expired sessions', error.stack);
+    }
+  }
+
+  /**
+   * Hash residence registration number
+   */
+  private async hashResidenceNumber(number: string): Promise<string> {
+    return bcrypt.hash(number, 10);
+  }
+
+  /**
+   * Mask phone number for logging
+   */
+  private maskPhoneNumber(phone: string): string {
+    if (phone.length < 8) return phone;
+
+    const start = phone.substring(0, phone.length - 8);
+    const end = phone.substring(phone.length - 4);
+    return `${start}****${end}`;
+  }
+
+  /**
+   * Log operations without sensitive data
+   */
+  private logSecurePhoneOperation(operation: string, data: any): void {
+    const sanitizedData = {
+      ...data,
+      residenceSuffix: '****masked****',
+      residenceNumberHash: '****masked****',
+      otp: '****masked****'
+    };
+    this.logger.log(`${operation}:`, sanitizedData);
   }
 }

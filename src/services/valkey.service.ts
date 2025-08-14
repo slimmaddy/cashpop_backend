@@ -136,4 +136,40 @@ export class ValkeyService {
   private getAttestationNonceKey(userId: string, nonce: string): string {
     return `attestation:nonce:${userId}:${nonce}`;
   }
+
+  /**
+   * Generic get method for any key
+   * @param key Redis key
+   * @returns Value or null if not found
+   */
+  async get(key: string): Promise<string | null> {
+    return await this.client.get(key);
+  }
+
+  /**
+   * Generic set method with expiry
+   * @param key Redis key
+   * @param expiry Expiry time in seconds
+   * @param value Value to store
+   */
+  async setex(key: string, expiry: number, value: string): Promise<void> {
+    await this.client.setex(key, expiry, value);
+  }
+
+  /**
+   * Generic set method
+   * @param key Redis key
+   * @param value Value to store
+   */
+  async set(key: string, value: string): Promise<void> {
+    await this.client.set(key, value);
+  }
+
+  /**
+   * Delete a key
+   * @param key Redis key
+   */
+  async del(key: string): Promise<void> {
+    await this.client.del(key);
+  }
 }

@@ -283,4 +283,39 @@ export class UsersService {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
   }
+
+  // ==================== PHONE VERIFICATION METHODS ====================
+
+  /**
+   * Find user by phone number
+   */
+  async findByPhoneNumber(phoneNumber: string): Promise<User | null> {
+    return await this.usersRepository.findOne({
+      where: { phoneNumber }
+    });
+  }
+
+  /**
+   * Find user by residence registration number (hashed)
+   */
+  async findByResidenceNumber(hashedResidenceNumber: string): Promise<User | null> {
+    return await this.usersRepository.findOne({
+      where: { residenceRegistrationNumber: hashedResidenceNumber }
+    });
+  }
+
+  /**
+   * Update user phone verification information
+   */
+  async updatePhoneVerification(userId: string, data: {
+    phoneNumber: string;
+    phoneCarrier: string;
+    phoneVerified: boolean;
+    phoneVerifiedAt: Date;
+    residenceRegistrationNumber: string;
+    residenceRegistrationPrefix: string;
+    identityVerified: boolean;
+  }): Promise<void> {
+    await this.usersRepository.update(userId, data);
+  }
 }
