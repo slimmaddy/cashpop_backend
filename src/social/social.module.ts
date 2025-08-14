@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { HttpModule } from "@nestjs/axios";
 import { UsersModule } from "../users/users.module";
+import { ServicesModule } from "../services/services.module";
 
 // Entities
 import { Relationship } from "./entities/relationship.entity";
@@ -14,7 +15,10 @@ import { SuggestionService } from "./services/suggestion.service";
 import { SocialSyncService } from "./services/social-sync.service";
 import { FacebookSyncService } from "./services/syncing-facebook.service";
 import { LineSyncService } from "./services/syncing-line.service";
+import { PhoneSyncService } from "./services/syncing-phone.service";
 import { UserContextService } from "./services/user-context.service";
+import { UserLookupService } from "./services/user-lookup.service";
+import { BulkOperationsService } from "./services/bulk-operations.service";
 
 // Repositories
 import { RelationshipRepository } from "./repositories/relationship.repository";
@@ -56,6 +60,7 @@ import { SyncController } from "./controllers/sync.controller";
       },
     }),
     UsersModule, // Import UsersModule để sử dụng UsersService
+    ServicesModule, // Import ServicesModule để sử dụng SmsService
   ],
   controllers: [
     RelationshipController, // GET /social/friends, POST /social/friends/request, GET /social/friends/requests/received, POST /social/friends/requests/:id/accept, POST /social/friends/requests/:id/reject
@@ -68,7 +73,10 @@ import { SyncController } from "./controllers/sync.controller";
     SocialSyncService, // Service cho sync contacts
     FacebookSyncService, // Service cho Facebook integration
     LineSyncService, // Service cho LINE integration
+    PhoneSyncService, // Service cho Phone integration
     UserContextService, // ✅ CONSOLIDATED: Service cho user context management, lookup và caching
+    UserLookupService, // ✅ Service cho user lookup và email validation
+    BulkOperationsService, // ✅ Service cho bulk friend operations
     RelationshipRepository, // ✅ CUSTOM: Repository với optimized queries
   ],
   exports: [

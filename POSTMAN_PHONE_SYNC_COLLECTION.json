@@ -1,0 +1,566 @@
+{
+  "info": {
+    "name": "CashPop Phone Sync API",
+    "description": "Postman collection for testing Phone Sync functionality",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "description": "Base URL for the API"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "description": "JWT token for authentication - Fill this after login"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login to get JWT token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"your_email@example.com\",\n  \"password\": \"your_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Login để lấy JWT token. Copy token từ response vào variable jwt_token"
+          },
+          "response": [
+            {
+              "name": "Successful Login",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "login"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"tokens\": {\n    \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"refreshToken\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\"\n  },\n  \"user\": {\n    \"id\": 1,\n    \"email\": \"user@example.com\",\n    \"name\": \"Test User\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Phone Sync - Main APIs",
+      "item": [
+        {
+          "name": "Sync Phone Contacts - Happy Path",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"12345678-1234-1234-1234-123456789abc\",\n    \"contactsJson\": \"[{\\\"name\\\":\\\"김민준\\\",\\\"phone\\\":\\\"+821012345678\\\"},{\\\"name\\\":\\\"이소영\\\",\\\"phone\\\":\\\"+821087654321\\\"},{\\\"name\\\":\\\"박지훈\\\",\\\"phone\\\":\\\"010-5555-6666\\\"}]\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Main phone sync endpoint với valid data"
+          },
+          "response": [
+            {
+              "name": "Successful Sync",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{jwt_token}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"12345678-1234-1234-1234-123456789abc\",\n    \"contactsJson\": \"[{\\\"name\\\":\\\"김민준\\\",\\\"phone\\\":\\\"+821012345678\\\"},{\\\"name\\\":\\\"이소영\\\",\\\"phone\\\":\\\"+821087654321\\\"}]\"\n  }\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/social/sync/contacts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["social", "sync", "contacts"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Sync phone successfully completed in 1250ms\",\n  \"result\": {\n    \"platform\": \"phone\",\n    \"totalContacts\": 2,\n    \"cashpopUsersFound\": 1,\n    \"newFriendshipsCreated\": 1,\n    \"alreadyFriends\": 0,\n    \"errors\": [],\n    \"details\": {\n      \"contactsProcessed\": [\n        {\n          \"id\": \"phone_1705234567890_0\",\n          \"name\": \"김민준\",\n          \"phone\": \"+821012345678\",\n          \"platform\": \"phone\"\n        }\n      ],\n      \"newFriends\": [\n        {\n          \"email\": \"minjun@example.com\",\n          \"name\": \"김민준\",\n          \"source\": \"phone_sync\"\n        }\n      ]\n    },\n    \"executionTime\": 1250\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Sync Phone Contacts - Edge Cases",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"edge-case-test-session\",\n    \"contactsJson\": \"[{\\\"name\\\":\\\"Valid Korean\\\",\\\"phone\\\":\\\"+821012345678\\\"},{\\\"name\\\":\\\"Local Format\\\",\\\"phone\\\":\\\"010-1234-5678\\\"},{\\\"name\\\":\\\"No Dash\\\",\\\"phone\\\":\\\"01012345678\\\"},{\\\"name\\\":\\\"Invalid US\\\",\\\"phone\\\":\\\"+1-555-123-4567\\\"},{\\\"name\\\":\\\"Too Short\\\",\\\"phone\\\":\\\"123-456\\\"},{\\\"name\\\":\\\"Empty Phone\\\",\\\"phone\\\":\\\"\\\"}]\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Test với các edge cases: format khác nhau, invalid numbers, etc."
+          }
+        },
+        {
+          "name": "Test Sync with Mock Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test?platform=phone",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test"],
+              "query": [
+                {
+                  "key": "platform",
+                  "value": "phone"
+                }
+              ]
+            },
+            "description": "Test sync với mock data - không cần contacts JSON"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phone Sync - Error Cases",
+      "item": [
+        {
+          "name": "Invalid Session ID",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"invalid-session-id\",\n    \"contactsJson\": \"[{\\\"name\\\":\\\"Test Contact\\\",\\\"phone\\\":\\\"+821012345678\\\"}]\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Test với invalid session ID - should return 400"
+          }
+        },
+        {
+          "name": "Malformed JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"12345678-1234-1234-1234-123456789abc\",\n    \"contactsJson\": \"invalid json format\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Test với malformed JSON - should return 400"
+          }
+        },
+        {
+          "name": "Missing Required Fields",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"12345678-1234-1234-1234-123456789abc\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Test với missing contactsJson - should return validation error"
+          }
+        },
+        {
+          "name": "No Authentication",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"12345678-1234-1234-1234-123456789abc\",\n    \"contactsJson\": \"[]\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Test without JWT token - should return 401"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phone Sync - Test Utilities",
+      "item": [
+        {
+          "name": "Test Phone Session Validation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test/phone/session/12345678-1234-1234-1234-123456789abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test", "phone", "session", "12345678-1234-1234-1234-123456789abc"]
+            },
+            "description": "Test specific session ID validation"
+          }
+        },
+        {
+          "name": "Test Invalid Phone Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test/phone/session/invalid-session-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test", "phone", "session", "invalid-session-id"]
+            },
+            "description": "Test với invalid session ID"
+          }
+        },
+        {
+          "name": "Get Mock Phone Data - Standard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test/phone/mock-data?type=standard",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test", "phone", "mock-data"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "standard"
+                }
+              ]
+            },
+            "description": "Lấy mock data chuẩn"
+          }
+        },
+        {
+          "name": "Get Mock Phone Data - Edge Cases",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test/phone/mock-data?type=edge-cases",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test", "phone", "mock-data"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "edge-cases"
+                }
+              ]
+            },
+            "description": "Lấy mock data với edge cases"
+          }
+        },
+        {
+          "name": "Get Mock Phone Data - Large Dataset",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test/phone/mock-data?type=large&count=500",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test", "phone", "mock-data"],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "large"
+                },
+                {
+                  "key": "count",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "Lấy large mock dataset cho performance testing"
+          }
+        },
+        {
+          "name": "Validate Phone Contacts JSON",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"contactsJson\": \"[{\\\"name\\\":\\\"김민준\\\",\\\"phone\\\":\\\"+821012345678\\\"},{\\\"name\\\":\\\"이소영\\\",\\\"phone\\\":\\\"010-8765-4321\\\"},{\\\"name\\\":\\\"Invalid US\\\",\\\"phone\\\":\\\"+1-555-123-4567\\\"}]\",\n  \"validatePhoneNumbers\": true,\n  \"skipDuplicates\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/test/phone/validate-json",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "test", "phone", "validate-json"]
+            },
+            "description": "Test validation của contacts JSON format"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phone Sync - Performance Tests",
+      "item": [
+        {
+          "name": "Small Dataset (10 contacts)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"performance-test-session-id\",\n    \"contactsJson\": \"[{\\\"name\\\":\\\"Contact 1\\\",\\\"phone\\\":\\\"+821012340001\\\"},{\\\"name\\\":\\\"Contact 2\\\",\\\"phone\\\":\\\"+821012340002\\\"},{\\\"name\\\":\\\"Contact 3\\\",\\\"phone\\\":\\\"+821012340003\\\"},{\\\"name\\\":\\\"Contact 4\\\",\\\"phone\\\":\\\"+821012340004\\\"},{\\\"name\\\":\\\"Contact 5\\\",\\\"phone\\\":\\\"+821012340005\\\"},{\\\"name\\\":\\\"Contact 6\\\",\\\"phone\\\":\\\"+821012340006\\\"},{\\\"name\\\":\\\"Contact 7\\\",\\\"phone\\\":\\\"+821012340007\\\"},{\\\"name\\\":\\\"Contact 8\\\",\\\"phone\\\":\\\"+821012340008\\\"},{\\\"name\\\":\\\"Contact 9\\\",\\\"phone\\\":\\\"+821012340009\\\"},{\\\"name\\\":\\\"Contact 10\\\",\\\"phone\\\":\\\"+821012340010\\\"}]\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Performance test với 10 contacts - expected < 500ms"
+          }
+        },
+        {
+          "name": "Medium Dataset (50 contacts)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform\": \"phone\",\n  \"phone\": {\n    \"sessionId\": \"performance-test-session-id\",\n    \"contactsJson\": \"[{\\\"name\\\":\\\"Contact 1\\\",\\\"phone\\\":\\\"+821012340001\\\"},{\\\"name\\\":\\\"Contact 2\\\",\\\"phone\\\":\\\"+821012340002\\\"},{\\\"name\\\":\\\"Contact 3\\\",\\\"phone\\\":\\\"+821012340003\\\"},{\\\"name\\\":\\\"Contact 4\\\",\\\"phone\\\":\\\"+821012340004\\\"},{\\\"name\\\":\\\"Contact 5\\\",\\\"phone\\\":\\\"+821012340005\\\"},{\\\"name\\\":\\\"Contact 6\\\",\\\"phone\\\":\\\"+821012340006\\\"},{\\\"name\\\":\\\"Contact 7\\\",\\\"phone\\\":\\\"+821012340007\\\"},{\\\"name\\\":\\\"Contact 8\\\",\\\"phone\\\":\\\"+821012340008\\\"},{\\\"name\\\":\\\"Contact 9\\\",\\\"phone\\\":\\\"+821012340009\\\"},{\\\"name\\\":\\\"Contact 10\\\",\\\"phone\\\":\\\"+821012340010\\\"},{\\\"name\\\":\\\"Contact 11\\\",\\\"phone\\\":\\\"+821012340011\\\"},{\\\"name\\\":\\\"Contact 12\\\",\\\"phone\\\":\\\"+821012340012\\\"},{\\\"name\\\":\\\"Contact 13\\\",\\\"phone\\\":\\\"+821012340013\\\"},{\\\"name\\\":\\\"Contact 14\\\",\\\"phone\\\":\\\"+821012340014\\\"},{\\\"name\\\":\\\"Contact 15\\\",\\\"phone\\\":\\\"+821012340015\\\"},{\\\"name\\\":\\\"Contact 16\\\",\\\"phone\\\":\\\"+821012340016\\\"},{\\\"name\\\":\\\"Contact 17\\\",\\\"phone\\\":\\\"+821012340017\\\"},{\\\"name\\\":\\\"Contact 18\\\",\\\"phone\\\":\\\"+821012340018\\\"},{\\\"name\\\":\\\"Contact 19\\\",\\\"phone\\\":\\\"+821012340019\\\"},{\\\"name\\\":\\\"Contact 20\\\",\\\"phone\\\":\\\"+821012340020\\\"},{\\\"name\\\":\\\"Contact 21\\\",\\\"phone\\\":\\\"+821012340021\\\"},{\\\"name\\\":\\\"Contact 22\\\",\\\"phone\\\":\\\"+821012340022\\\"},{\\\"name\\\":\\\"Contact 23\\\",\\\"phone\\\":\\\"+821012340023\\\"},{\\\"name\\\":\\\"Contact 24\\\",\\\"phone\\\":\\\"+821012340024\\\"},{\\\"name\\\":\\\"Contact 25\\\",\\\"phone\\\":\\\"+821012340025\\\"},{\\\"name\\\":\\\"Contact 26\\\",\\\"phone\\\":\\\"+821012340026\\\"},{\\\"name\\\":\\\"Contact 27\\\",\\\"phone\\\":\\\"+821012340027\\\"},{\\\"name\\\":\\\"Contact 28\\\",\\\"phone\\\":\\\"+821012340028\\\"},{\\\"name\\\":\\\"Contact 29\\\",\\\"phone\\\":\\\"+821012340029\\\"},{\\\"name\\\":\\\"Contact 30\\\",\\\"phone\\\":\\\"+821012340030\\\"},{\\\"name\\\":\\\"Contact 31\\\",\\\"phone\\\":\\\"+821012340031\\\"},{\\\"name\\\":\\\"Contact 32\\\",\\\"phone\\\":\\\"+821012340032\\\"},{\\\"name\\\":\\\"Contact 33\\\",\\\"phone\\\":\\\"+821012340033\\\"},{\\\"name\\\":\\\"Contact 34\\\",\\\"phone\\\":\\\"+821012340034\\\"},{\\\"name\\\":\\\"Contact 35\\\",\\\"phone\\\":\\\"+821012340035\\\"},{\\\"name\\\":\\\"Contact 36\\\",\\\"phone\\\":\\\"+821012340036\\\"},{\\\"name\\\":\\\"Contact 37\\\",\\\"phone\\\":\\\"+821012340037\\\"},{\\\"name\\\":\\\"Contact 38\\\",\\\"phone\\\":\\\"+821012340038\\\"},{\\\"name\\\":\\\"Contact 39\\\",\\\"phone\\\":\\\"+821012340039\\\"},{\\\"name\\\":\\\"Contact 40\\\",\\\"phone\\\":\\\"+821012340040\\\"},{\\\"name\\\":\\\"Contact 41\\\",\\\"phone\\\":\\\"+821012340041\\\"},{\\\"name\\\":\\\"Contact 42\\\",\\\"phone\\\":\\\"+821012340042\\\"},{\\\"name\\\":\\\"Contact 43\\\",\\\"phone\\\":\\\"+821012340043\\\"},{\\\"name\\\":\\\"Contact 44\\\",\\\"phone\\\":\\\"+821012340044\\\"},{\\\"name\\\":\\\"Contact 45\\\",\\\"phone\\\":\\\"+821012340045\\\"},{\\\"name\\\":\\\"Contact 46\\\",\\\"phone\\\":\\\"+821012340046\\\"},{\\\"name\\\":\\\"Contact 47\\\",\\\"phone\\\":\\\"+821012340047\\\"},{\\\"name\\\":\\\"Contact 48\\\",\\\"phone\\\":\\\"+821012340048\\\"},{\\\"name\\\":\\\"Contact 49\\\",\\\"phone\\\":\\\"+821012340049\\\"},{\\\"name\\\":\\\"Contact 50\\\",\\\"phone\\\":\\\"+821012340050\\\"}]\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/contacts",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "contacts"]
+            },
+            "description": "Performance test với 50 contacts - expected < 2s"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Phone Sync - Related APIs",
+      "item": [
+        {
+          "name": "Get Sync History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/sync/history",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "sync", "history"]
+            },
+            "description": "Xem lịch sử sync bao gồm phone sync"
+          }
+        },
+        {
+          "name": "Get Friends List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/friends",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "friends"]
+            },
+            "description": "Xem danh sách bạn bè sau khi sync"
+          }
+        },
+        {
+          "name": "Get Friend Suggestions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{jwt_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/social/suggestions",
+              "host": ["{{baseUrl}}"],
+              "path": ["social", "suggestions"]
+            },
+            "description": "Xem gợi ý kết bạn có thể được tạo từ phone sync"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export enum SyncPlatform {
   CONTACT = "contact",
+  PHONE = "phone",
   FACEBOOK = "facebook",
   LINE = "line",
 }
@@ -37,12 +38,20 @@ export class LineSyncDataDto {
 
 export class PhoneSyncDataDto {
   @ApiProperty({
-    description: "Phone access token from client",
-    example: "EAABwzLixnjYBAO7ZC4...",
+    description: "Phone verification session ID from previous OTP verification",
+    example: "uuid-session-id",
   })
   @IsString()
   @IsNotEmpty()
-  token: string;
+  sessionId: string;
+
+  @ApiProperty({
+    description: "Contact list from phone as JSON array",
+    example: "[{\"name\":\"John Doe\",\"phone\":\"+821012345678\"},{\"name\":\"Jane Smith\",\"phone\":\"+821087654321\"}]",
+  })
+  @IsString()
+  @IsNotEmpty()
+  contactsJson: string;
 }
 
 export class SyncContactDto {
@@ -71,6 +80,15 @@ export class SyncContactDto {
   @ValidateIf((o) => o.platform === SyncPlatform.LINE)
   @IsNotEmpty()
   line?: LineSyncDataDto;
+
+  @ApiProperty({
+    description: "Phone sync data",
+    type: PhoneSyncDataDto,
+    required: false,
+  })
+  @ValidateIf((o) => o.platform === SyncPlatform.PHONE)
+  @IsNotEmpty()
+  phone?: PhoneSyncDataDto;
 }
 
 export interface ContactInfo {

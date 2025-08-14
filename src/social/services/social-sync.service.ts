@@ -16,6 +16,7 @@ import {
 } from "../dto/syncing.dto";
 import { FacebookSyncService } from "./syncing-facebook.service";
 import { LineSyncService } from "./syncing-line.service";
+import { PhoneSyncService } from "./syncing-phone.service";
 import { RelationshipService } from "./relationship.service";
 import { UserContextService } from "./user-context.service";
 import { SuggestionService } from "./suggestion.service";
@@ -41,6 +42,7 @@ export class SocialSyncService {
     private readonly relationshipRepository: Repository<Relationship>,
     private readonly facebookSyncService: FacebookSyncService,
     private readonly lineSyncService: LineSyncService,
+    private readonly phoneSyncService: PhoneSyncService,
     private readonly relationshipService: RelationshipService,
     private readonly userContextService: UserContextService,
     private readonly suggestionService: SuggestionService
@@ -91,8 +93,19 @@ export class SocialSyncService {
           );
           break;
 
+        case SyncPlatform.PHONE:
+          if (!syncDto.phone?.sessionId || !syncDto.phone?.contactsJson) {
+            throw new InvalidSyncTokenException("PHONE", "Session ID and contacts JSON are required");
+          }
+          contacts = await this.phoneSyncService.getContacts(
+            syncDto.phone.sessionId,
+            syncDto.phone.contactsJson,
+            { maxContacts }
+          );
+          break;
+
         case SyncPlatform.CONTACT:
-          throw new PlatformSyncNotSupportedException("Phone contacts");
+          throw new PlatformSyncNotSupportedException("Phone contacts (use PHONE platform instead)");
 
         default:
           throw new PlatformSyncNotSupportedException(syncDto.platform);
@@ -384,9 +397,12 @@ export class SocialSyncService {
         case SyncPlatform.LINE:
           contacts = await this.lineSyncService.getMockContacts();
           break;
+        case SyncPlatform.PHONE:
+          contacts = await this.phoneSyncService.getMockContacts();
+          break;
         default:
           throw new BadRequestException(
-            "Test chỉ hỗ trợ Facebook và LINE platform"
+            "Test chỉ hỗ trợ Facebook, LINE và Phone platform"
           );
       }
 
