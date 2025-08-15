@@ -8,6 +8,7 @@ import { UsersModule } from "./users/users.module";
 import { ServicesModule } from "./services/services.module";
 import { FileUploadModule } from "./file-upload/file-upload.module";
 import { HealthModule } from "./health/health.module";
+import { SocialModule } from "./social/social.module";
 
 @Module({
   imports: [
@@ -29,7 +30,7 @@ import { HealthModule } from "./health/health.module";
         database: configService.get("DB_DATABASE", "cashpop"),
         entities: [__dirname + "/**/*.entity{.ts,.js}"],
         migrations: [__dirname + "/migrations/*{.ts,.js}"],
-        synchronize: false, // Disabled to use migrations
+        synchronize: configService.get("NODE_ENV") === "development", // Auto-sync in development
         ssl:
           configService.get("DB_SSL", "false") === "true"
             ? { rejectUnauthorized: false }
@@ -43,6 +44,7 @@ import { HealthModule } from "./health/health.module";
     ServicesModule,
     FileUploadModule,
     HealthModule,
+    SocialModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -13,7 +13,7 @@ export class AppController {
   @ApiResponse({
     status: 200,
     description: "Health check successful",
-    type: HealthCheckResponseDto
+    type: HealthCheckResponseDto,
   })
   getHello(): HealthCheckResponseDto {
     return this.appService.getHello();

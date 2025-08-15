@@ -1,5 +1,12 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsNumber, IsString, Min, IsOptional, IsDateString } from "class-validator";
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsString,
+  Min,
+  IsOptional,
+  IsDateString,
+} from "class-validator";
 
 export class CreateHealthDataDto {
   @ApiProperty({
@@ -12,7 +19,8 @@ export class CreateHealthDataDto {
   nonce: string;
 
   @ApiProperty({
-    description: "The attestation token from Play Integrity API (Android) or assertion from App Attest (iOS)",
+    description:
+      "The attestation token from Play Integrity API (Android) or assertion from App Attest (iOS)",
     example: "eyJhbGciOiJSUzI1NiIsImtpZCI6IjEiLCJ0eXAiOiJKV1QifQ...",
     required: true,
   })

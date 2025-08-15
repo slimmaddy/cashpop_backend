@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import * as nodemailer from "nodemailer";
 
 @Injectable()
 export class MailerService {
@@ -8,11 +8,11 @@ export class MailerService {
 
   constructor(private configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get('MAILTRAP_HOST'),
-      port: this.configService.get('MAILTRAP_PORT'),
+      host: this.configService.get("MAILTRAP_HOST"),
+      port: this.configService.get("MAILTRAP_PORT"),
       auth: {
-        user: this.configService.get('MAILTRAP_USER'),
-        pass: this.configService.get('MAILTRAP_PASS'),
+        user: this.configService.get("MAILTRAP_USER"),
+        pass: this.configService.get("MAILTRAP_PASS"),
       },
     });
   }
@@ -26,7 +26,7 @@ export class MailerService {
    */
   async sendMail(to: string, subject: string, html: string): Promise<any> {
     const mailOptions = {
-      from: this.configService.get('MAIL_FROM', 'noreply@example.com'),
+      from: this.configService.get("MAIL_FROM", "noreply@example.com"),
       to,
       subject,
       html,
@@ -42,7 +42,7 @@ export class MailerService {
    * @returns Information about the sent email
    */
   async sendOtpEmail(to: string, otp: string): Promise<any> {
-    const subject = 'Email Verification Code';
+    const subject = "Email Verification Code";
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Email Verification</h2>
@@ -65,7 +65,7 @@ export class MailerService {
    * @returns Information about the sent email
    */
   async sendPasswordResetOtpEmail(to: string, otp: string): Promise<any> {
-    const subject = 'Password Reset Code';
+    const subject = "Password Reset Code";
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Password Reset</h2>
@@ -88,7 +88,7 @@ export class MailerService {
    * @returns Information about the sent email
    */
   async sendFindUsernameOtpEmail(to: string, otp: string): Promise<any> {
-    const subject = 'Find Your Username Code';
+    const subject = "Find Your Username Code";
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Find Your Username</h2>

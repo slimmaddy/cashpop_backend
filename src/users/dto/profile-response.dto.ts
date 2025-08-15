@@ -21,9 +21,9 @@ export class ProfileResponseDto {
   name: string;
 
   @Expose()
-  @ApiProperty({ 
+  @ApiProperty({
     description: "The authentication provider used for this user",
-    enum: AuthProvider
+    enum: AuthProvider,
   })
   provider: AuthProvider;
 
@@ -40,24 +40,52 @@ export class ProfileResponseDto {
   weight: number;
 
   @Expose()
-  @ApiProperty({ 
-    description: "The sex of the user (male/female/other)", 
+  @ApiProperty({
+    description: "The sex of the user (male/female/other)",
     required: false,
-    enum: ['male', 'female', 'other']
+    enum: ["male", "female", "other"],
   })
   sex: string;
 
   @Expose()
-  @ApiProperty({ description: "The date of birth of the user", required: false })
+  @ApiProperty({
+    description: "The date of birth of the user",
+    required: false,
+  })
   dateOfBirth: Date;
 
   @Expose()
-  @ApiProperty({ description: "The residential area of the user", required: false })
+  @ApiProperty({
+    description: "The residential area of the user",
+    required: false,
+  })
   residentialArea: string;
 
   @Expose()
-  @ApiProperty({ description: "The invite code that can be shared with other users" })
+  @ApiProperty({
+    description: "The invite code that can be shared with other users",
+  })
   inviteCode: string;
+
+  @Expose()
+  @ApiProperty({ description: "The phone number of the user", required: false })
+  phoneNumber: string;
+
+  @Expose()
+  @ApiProperty({ description: "Whether the phone number is verified", required: false })
+  phoneVerified: boolean;
+
+  @Expose()
+  @ApiProperty({ description: "The phone carrier (SKT, KT, LG U+)", required: false })
+  phoneCarrier: string;
+
+  @Expose()
+  @ApiProperty({ description: "Overall identity verification status", required: false })
+  identityVerified: boolean;
+
+  @Expose()
+  @ApiProperty({ description: "When the phone was verified", required: false })
+  phoneVerifiedAt: Date;
 
   @Expose()
   @ApiProperty({ description: "The date when the user was created" })

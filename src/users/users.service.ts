@@ -53,21 +53,29 @@ export class UsersService {
         return await this.usersRepository.save(user);
       } catch (error) {
         // If it's a unique constraint error on invite_code, retry
-        if (error.code === '23505' && error.detail?.includes('invite_code')) {
+        if (error.code === "23505" && error.detail?.includes("invite_code")) {
           retries++;
-          console.log(`Invite code collision detected, retrying (${retries}/${maxRetries})...`);
+          console.log(
+            `Invite code collision detected, retrying (${retries}/${maxRetries})...`
+          );
         } else {
           // For any other error, rethrow
           throw error;
         }
       }
     }
-    
+
     // If we've exhausted all retries, throw an error
-    throw new InternalServerErrorException('Failed to create user with a unique invite code after multiple attempts');
+    throw new InternalServerErrorException(
+      "Failed to create user with a unique invite code after multiple attempts"
+    );
   }
 
-  async createFacebookUser(email: string, providerId: string, name: string): Promise<User> {
+  async createFacebookUser(
+    email: string,
+    providerId: string,
+    name: string
+  ): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
       where: { email },
     });
@@ -77,7 +85,7 @@ export class UsersService {
     }
 
     // Generate a username based on the email (before the @ symbol)
-    let baseUsername = email.split('@')[0];
+    let baseUsername = email.split("@")[0];
     let username = baseUsername;
     let counter = 1;
 
@@ -98,7 +106,11 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async createLineUser(email: string, providerId: string, name: string): Promise<User> {
+  async createLineUser(
+    email: string,
+    providerId: string,
+    name: string
+  ): Promise<User> {
     // Check if user already exists by providerId for Line users (since email is placeholder)
     const existingUserByProviderId = await this.usersRepository.findOne({
       where: { providerId, provider: AuthProvider.LINE },
@@ -109,7 +121,7 @@ export class UsersService {
     }
 
     // For Line users, also check by email in case it's a real email
-    if (!email.includes('line.placeholder')) {
+    if (!email.includes("line.placeholder")) {
       const existingUser = await this.usersRepository.findOne({
         where: { email },
       });
@@ -120,7 +132,9 @@ export class UsersService {
     }
 
     // Generate a username based on Line ID or name
-    let baseUsername = name ? name.toLowerCase().replace(/\s+/g, '_') : `line_${providerId.substring(0, 8)}`;
+    let baseUsername = name
+      ? name.toLowerCase().replace(/\s+/g, "_")
+      : `line_${providerId.substring(0, 8)}`;
     let username = baseUsername;
     let counter = 1;
 
@@ -145,18 +159,29 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
+  async findById(id: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { id } });
+  }
+
   async findByUsername(username: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { username } });
   }
 
-  async findByProviderId(providerId: string, provider: AuthProvider): Promise<User | null> {
-    return this.usersRepository.findOne({ 
-      where: { providerId, provider } 
+  async findByProviderId(
+    providerId: string,
+    provider: AuthProvider
+  ): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { providerId, provider },
     });
   }
 
   async updateProviderId(userId: string, providerId: string): Promise<void> {
     await this.usersRepository.update(userId, { providerId });
+  }
+
+  async updateUserEmail(userId: string, email: string): Promise<void> {
+    await this.usersRepository.update(userId, { email });
   }
 
   async setRefreshToken(
@@ -179,14 +204,14 @@ export class UsersService {
    */
   async updatePassword(email: string, newPassword: string): Promise<User> {
     const user = await this.findByEmail(email);
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Update password
     user.password = newPassword;
-    
+
     // Save user with updated password
     // The password will be automatically hashed by the entity's BeforeUpdate hook
     return this.usersRepository.save(user);
@@ -200,32 +225,35 @@ export class UsersService {
    * @returns Updated user profile
    */
   async updateProfile(
-    userId: string, 
+    userId: string,
     updateProfileDto: UpdateProfileDto,
     file?: Express.Multer.File
   ): Promise<ProfileResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // If file is provided, upload it and update the avatar URL
     if (file) {
-      const avatarUrl = await this.fileUploadService.uploadFile(file, 'avatars');
+      const avatarUrl = await this.fileUploadService.uploadFile(
+        file,
+        "avatars"
+      );
       updateProfileDto.avatar = avatarUrl;
     }
 
     // Update only the fields that are provided
-    Object.keys(updateProfileDto).forEach(key => {
+    Object.keys(updateProfileDto).forEach((key) => {
       if (updateProfileDto[key] !== undefined) {
         user[key] = updateProfileDto[key];
       }
     });
-    
+
     // Save the updated user
     const updatedUser = await this.usersRepository.save(user);
-    
+
     // Transform to ProfileResponseDto to exclude sensitive data
     return plainToInstance(ProfileResponseDto, updatedUser);
   }
@@ -237,11 +265,11 @@ export class UsersService {
    */
   async getProfile(userId: string): Promise<ProfileResponseDto> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
-    
+
     // Transform to ProfileResponseDto to exclude sensitive data
     return plainToInstance(ProfileResponseDto, user);
   }
@@ -253,17 +281,17 @@ export class UsersService {
    */
   async removeAccount(userId: string): Promise<boolean> {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
-    
+
     try {
       // Delete the user from the database
       await this.usersRepository.remove(user);
       return true;
     } catch (error) {
-      throw new InternalServerErrorException('Failed to remove account');
+      throw new InternalServerErrorException("Failed to remove account");
     }
   }
 
@@ -272,7 +300,46 @@ export class UsersService {
    * @returns A random invite code
    */
   generateInviteCode(length: number): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const chars =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    return Array.from(
+      { length },
+      () => chars[Math.floor(Math.random() * chars.length)]
+    ).join("");
+  }
+
+  // ==================== PHONE VERIFICATION METHODS ====================
+
+  /**
+   * Find user by phone number
+   */
+  async findByPhoneNumber(phoneNumber: string): Promise<User | null> {
+    return await this.usersRepository.findOne({
+      where: { phoneNumber }
+    });
+  }
+
+  /**
+   * Find user by residence registration number (hashed)
+   */
+  async findByResidenceNumber(hashedResidenceNumber: string): Promise<User | null> {
+    return await this.usersRepository.findOne({
+      where: { residenceRegistrationNumber: hashedResidenceNumber }
+    });
+  }
+
+  /**
+   * Update user phone verification information
+   */
+  async updatePhoneVerification(userId: string, data: {
+    phoneNumber: string;
+    phoneCarrier: string;
+    phoneVerified: boolean;
+    phoneVerifiedAt: Date;
+    residenceRegistrationNumber: string;
+    residenceRegistrationPrefix: string;
+    identityVerified: boolean;
+  }): Promise<void> {
+    await this.usersRepository.update(userId, data);
   }
 }

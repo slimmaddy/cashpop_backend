@@ -1,25 +1,34 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, MoreThanOrEqual } from 'typeorm';
-import { HealthData } from './entities/health-data.entity';
-import { CreateHealthDataDto } from './dto/create-health-data.dto';
-import { HealthStatisticsQueryDto, HealthStatisticsResponseDto, HealthStatisticsItemDto, StatisticsPeriod } from './dto/health-statistics.dto';
-import { TodayHealthDataDto } from './dto/today-health-data.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, Between, MoreThanOrEqual } from "typeorm";
+import { HealthData } from "./entities/health-data.entity";
+import { CreateHealthDataDto } from "./dto/create-health-data.dto";
+import {
+  HealthStatisticsQueryDto,
+  HealthStatisticsResponseDto,
+  HealthStatisticsItemDto,
+  StatisticsPeriod,
+} from "./dto/health-statistics.dto";
+import { TodayHealthDataDto } from "./dto/today-health-data.dto";
 
 @Injectable()
 export class HealthService {
   constructor(
     @InjectRepository(HealthData)
-    private healthDataRepository: Repository<HealthData>,
+    private healthDataRepository: Repository<HealthData>
   ) {}
 
   /**
    * Create a new health data record
    */
-  async create(userId: string, createHealthDataDto: CreateHealthDataDto): Promise<HealthData> {
+  async create(
+    userId: string,
+    createHealthDataDto: CreateHealthDataDto
+  ): Promise<HealthData> {
     // If date is not provided, use today's date
-    const date = createHealthDataDto.date || new Date().toISOString().split('T')[0];
-    
+    const date =
+      createHealthDataDto.date || new Date().toISOString().split("T")[0];
+
     // Check if a record for this user and date already exists
     const existingRecord = await this.healthDataRepository.findOne({
       where: {
@@ -34,7 +43,7 @@ export class HealthService {
       existingRecord.duration = createHealthDataDto.duration;
       existingRecord.calories = createHealthDataDto.calories;
       existingRecord.distance = createHealthDataDto.distance;
-      
+
       return this.healthDataRepository.save(existingRecord);
     }
 
@@ -53,9 +62,9 @@ export class HealthService {
    */
   async getStatistics(
     userId: string,
-    query: HealthStatisticsQueryDto,
+    query: HealthStatisticsQueryDto
   ): Promise<HealthStatisticsResponseDto> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const startDate = query.startDate || today;
     const endDate = query.endDate || today;
     const period = query.period || StatisticsPeriod.DAY;
@@ -67,17 +76,19 @@ export class HealthService {
         date: Between(startDate, endDate),
       },
       order: {
-        date: 'ASC',
+        date: "ASC",
       },
     });
 
     if (records.length === 0) {
-      throw new NotFoundException('No health data found for the specified period');
+      throw new NotFoundException(
+        "No health data found for the specified period"
+      );
     }
 
     // Group records by period
     const groupedRecords = this.groupRecordsByPeriod(records, period);
-    
+
     // Calculate summary
     const summary: HealthStatisticsItemDto = {
       date: `${startDate} to ${endDate}`,
@@ -98,11 +109,11 @@ export class HealthService {
    */
   private groupRecordsByPeriod(
     records: HealthData[],
-    period: StatisticsPeriod,
+    period: StatisticsPeriod
   ): HealthStatisticsItemDto[] {
     if (period === StatisticsPeriod.DAY) {
       // For daily statistics, return each day's data
-      return records.map(record => ({
+      return records.map((record) => ({
         date: record.date,
         steps: record.steps,
         duration: record.duration,
@@ -114,7 +125,7 @@ export class HealthService {
     // For weekly or monthly statistics, group by week or month
     const groupedData = new Map<string, HealthStatisticsItemDto>();
 
-    records.forEach(record => {
+    records.forEach((record) => {
       const date = new Date(record.date);
       let groupKey: string;
 
@@ -127,7 +138,7 @@ export class HealthService {
         // Month
         const year = date.getFullYear();
         const month = date.getMonth() + 1; // getMonth() is 0-indexed
-        groupKey = `${year}-${month.toString().padStart(2, '0')}`;
+        groupKey = `${year}-${month.toString().padStart(2, "0")}`;
       }
 
       if (!groupedData.has(groupKey)) {
@@ -158,6 +169,6 @@ export class HealthService {
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + 4 - (d.getDay() || 7));
     const yearStart = new Date(d.getFullYear(), 0, 1);
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
   }
 }

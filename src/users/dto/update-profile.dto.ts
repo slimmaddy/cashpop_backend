@@ -1,18 +1,26 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsOptional, IsString, IsNumber, IsDate, MaxLength, IsEnum, IsUrl } from "class-validator";
+import {
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsDate,
+  MaxLength,
+  IsEnum,
+  IsUrl,
+} from "class-validator";
 import { Type } from "class-transformer";
 
 enum Sex {
-  MALE = 'male',
-  FEMALE = 'female',
-  OTHER = 'other'
+  MALE = "male",
+  FEMALE = "female",
+  OTHER = "other",
 }
 
 export class UpdateProfileDto {
   @ApiProperty({
     description: "The avatar URL of the user",
     example: "https://example.com/avatar.jpg",
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsUrl({}, { message: "Avatar must be a valid URL" })
@@ -22,7 +30,7 @@ export class UpdateProfileDto {
     description: "The full name of the user",
     example: "John Doe",
     maxLength: 50,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString({ message: "Name must be a string" })
@@ -32,7 +40,7 @@ export class UpdateProfileDto {
   @ApiProperty({
     description: "The height of the user in cm",
     example: 175.5,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber({}, { message: "Height must be a number" })
@@ -42,7 +50,7 @@ export class UpdateProfileDto {
   @ApiProperty({
     description: "The weight of the user in kg",
     example: 70.5,
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsNumber({}, { message: "Weight must be a number" })
@@ -53,7 +61,7 @@ export class UpdateProfileDto {
     description: "The sex of the user",
     enum: Sex,
     example: "male",
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsEnum(Sex, { message: "Sex must be one of: male, female, other" })
@@ -62,7 +70,7 @@ export class UpdateProfileDto {
   @ApiProperty({
     description: "The date of birth of the user",
     example: "1990-01-01",
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsDate({ message: "Date of birth must be a valid date" })
@@ -72,7 +80,7 @@ export class UpdateProfileDto {
   @ApiProperty({
     description: "The residential area of the user",
     example: "New York City",
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsString({ message: "Residential area must be a string" })
