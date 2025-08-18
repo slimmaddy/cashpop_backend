@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsEmail, IsString, IsOptional, ArrayMinSize, ArrayMaxSize } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsEmail, IsOptional, IsString } from "class-validator";
 
 export class BulkSendFriendRequestDto {
   @ApiProperty({

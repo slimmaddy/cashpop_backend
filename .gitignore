@@ -63,3 +63,6 @@ add-phone-verification-fields.sql
 
 .claude
 CLAUDE.md
+/src/dummy-data/
+/src/specs/
+INTERN_LEARNING_SPECS.md

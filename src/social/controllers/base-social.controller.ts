@@ -10,7 +10,7 @@ import { UserContextService } from "../services/user-context.service";
 export abstract class BaseSocialController {
   protected readonly logger = new Logger(this.constructor.name);
 
-  constructor(protected readonly userContextService: UserContextService) {}
+  constructor(protected readonly userContextService: UserContextService) { }
 
   /**
    * Lấy user từ JWT request với caching và error handling

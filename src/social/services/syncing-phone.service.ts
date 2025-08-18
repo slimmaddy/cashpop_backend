@@ -1,9 +1,9 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import { ContactInfo, SyncPlatform } from "../dto/syncing.dto";
-import { SmsService } from "../../services/sms.service";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { SmsService } from "../../services/sms.service";
 import { User } from "../../users/entities/user.entity";
+import { ContactInfo, SyncPlatform } from "../dto/syncing.dto";
 
 interface PhoneContact {
   name: string;
@@ -25,7 +25,7 @@ export class PhoneSyncService {
     private readonly smsService: SmsService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>
-  ) {}
+  ) { }
 
   /**
    * ✅ Validate phone verification session with enhanced mock logic
@@ -37,11 +37,11 @@ export class PhoneSyncService {
       // Enhanced mock validation for development/testing
       if (process.env.NODE_ENV === "development" || process.env.NODE_ENV !== "production") {
         this.logger.log("🧪 Using enhanced mock phone session validation for development");
-        
+
         // Define valid mock sessions with associated phone numbers
         const mockValidSessions = {
           "12345678-1234-1234-1234-123456789abc": "+821012345678",
-          "87654321-4321-4321-4321-cba987654321": "+821087654321", 
+          "87654321-4321-4321-4321-cba987654321": "+821087654321",
           "test-uuid-phone-session-12345678": "+821055556666",
           "mock-session-valid-phone-verification": "+821077778888",
           "user1-phone-session-verified": "+821033334444",
@@ -107,7 +107,7 @@ export class PhoneSyncService {
       // 3. Verify that OTP was successfully verified for this session
       // 4. Get the verified phone number associated with the session
       // 5. Optionally mark session as used if it's single-use
-      
+
       /* Production implementation would look like:
       const session = await this.redisService.get(`phone_session:${sessionId}`);
       if (!session) {
@@ -175,7 +175,7 @@ export class PhoneSyncService {
       let phoneContacts: PhoneContact[];
       try {
         phoneContacts = JSON.parse(contactsJson);
-        
+
         if (!Array.isArray(phoneContacts)) {
           throw new Error("Contacts must be an array");
         }
@@ -200,7 +200,7 @@ export class PhoneSyncService {
 
           // Format and validate phone number
           const formattedPhone = this.formatPhoneNumber(contact.phone);
-          
+
           if (validatePhoneNumbers && !this.validateKoreanPhone(formattedPhone)) {
             continue; // Skip invalid Korean phone numbers
           }
@@ -257,7 +257,7 @@ export class PhoneSyncService {
   private formatPhoneNumber(phone: string): string {
     // Remove all non-digit characters
     let cleaned = phone.replace(/\D/g, '');
-    
+
     // Handle different input formats
     if (cleaned.startsWith('82')) {
       // +82 or 82 prefix
@@ -272,7 +272,7 @@ export class PhoneSyncService {
       // Assume it needs +82 prefix
       cleaned = '+82' + cleaned;
     }
-    
+
     return cleaned;
   }
 
@@ -292,7 +292,7 @@ export class PhoneSyncService {
    */
   private maskPhoneNumber(phone: string): string {
     if (phone.length < 8) return phone;
-    
+
     const start = phone.substring(0, phone.length - 8);
     const end = phone.substring(phone.length - 4);
     return `${start}****${end}`;
@@ -334,7 +334,7 @@ export class PhoneSyncService {
   }> {
     try {
       const validation = await this.validatePhoneSession(sessionId);
-      
+
       return {
         isValid: validation.isValid,
         phoneNumber: validation.phoneNumber,
@@ -354,17 +354,17 @@ export class PhoneSyncService {
   private getPhoneErrorMessage(error: any): string {
     const statusMessages = {
       400: "Invalid request parameters",
-      401: "Phone verification session expired or invalid", 
+      401: "Phone verification session expired or invalid",
       403: "Insufficient phone verification permissions",
       404: "Phone verification session not found",
       429: "Too many phone sync requests",
       500: "Internal phone sync error"
     };
-    
+
     if (error.status && statusMessages[error.status]) {
       return `Phone Sync Error (${error.status}): ${statusMessages[error.status]}`;
     }
-    
+
     return error.message || "Unknown phone sync error";
   }
 
@@ -382,14 +382,14 @@ export class PhoneSyncService {
         platform: SyncPlatform.PHONE,
       },
       {
-        id: "mock_phone_2", 
+        id: "mock_phone_2",
         name: "이소영",
         phone: "+821087654321",
         platform: SyncPlatform.PHONE,
       },
       {
         id: "mock_phone_3",
-        name: "박지훈", 
+        name: "박지훈",
         phone: "+821055556666",
         platform: SyncPlatform.PHONE,
       },
@@ -460,7 +460,7 @@ export class PhoneSyncService {
         platform: SyncPlatform.PHONE,
       },
       {
-        id: "mock_edge_5", 
+        id: "mock_edge_5",
         name: "정민호",
         phone: "+821033334444", // Valid format
         platform: SyncPlatform.PHONE,
@@ -503,7 +503,7 @@ export class PhoneSyncService {
     for (let i = 0; i < count; i++) {
       const nameIndex = i % koreanNames.length;
       const phoneNumber = `+8210${String(Math.floor(10000000 + Math.random() * 90000000)).padStart(8, '0')}`;
-      
+
       contacts.push({
         id: `mock_large_${i + 1}`,
         name: `${koreanNames[nameIndex]} ${Math.floor(i / koreanNames.length) + 1}`,
@@ -537,7 +537,7 @@ export class PhoneSyncService {
         .andWhere("user.phoneVerified = :verified", { verified: true })
         .select([
           "user.id",
-          "user.email", 
+          "user.email",
           "user.name",
           "user.username",
           "user.phoneNumber"
@@ -545,7 +545,7 @@ export class PhoneSyncService {
         .getMany();
 
       this.logger.log(`✅ Found ${users.length} CashPop users with matching phone numbers`);
-      
+
       return users;
     } catch (error) {
       this.logger.error("❌ Error finding CashPop users by phone:", error.message);

@@ -1,5 +1,5 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { firstValueFrom } from "rxjs";
 import { ContactInfo, SyncPlatform } from "../dto/syncing.dto";
 
@@ -27,7 +27,7 @@ export class LineSyncService {
   private readonly logger = new Logger(LineSyncService.name);
   private readonly LINE_API_BASE = "https://api.line.me/v2";
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly httpService: HttpService) { }
 
   /**
    * Validate LINE access token
@@ -71,7 +71,7 @@ export class LineSyncService {
     includeMockData?: boolean;
   } = {}): Promise<ContactInfo[]> {
     const { validateProfile = true, maxContacts = 1000, includeMockData = true } = options;
-    
+
     try {
       this.logger.log(`📱 Fetching LINE contacts (max: ${maxContacts})...`);
 
@@ -102,7 +102,7 @@ export class LineSyncService {
       // 2. LINE Bot API integration
       // 3. Manual contact import via QR codes
       // 4. Contact sharing through LINE Mini Apps
-      
+
       this.logger.warn(
         "⚠️ LINE API does not provide direct contact access, using fallback strategies"
       );
@@ -250,16 +250,16 @@ export class LineSyncService {
     if (error.response?.data?.message) {
       return `LINE Error: ${error.response.data.message}`;
     }
-    
+
     // Check for LINE error details
     if (error.response?.data?.details) {
       return `LINE Error: ${error.response.data.details}`;
     }
-    
+
     // Map common HTTP status codes
     const statusMessages = {
       400: "Invalid request parameters",
-      401: "Invalid or expired access token", 
+      401: "Invalid or expired access token",
       403: "Insufficient permissions",
       404: "Resource not found",
       429: "Rate limit exceeded",
@@ -267,11 +267,11 @@ export class LineSyncService {
       502: "Bad gateway",
       503: "Service unavailable"
     };
-    
+
     if (error.response?.status && statusMessages[error.response.status]) {
       return `LINE API Error (${error.response.status}): ${statusMessages[error.response.status]}`;
     }
-    
+
     return error.message || "Unknown LINE API error";
   }
 
@@ -324,7 +324,7 @@ export class LineSyncService {
       {
         id: "mock_line_2",
         name: "Lee So-young",
-        email: "soyoung.lee@example.com", 
+        email: "soyoung.lee@example.com",
         platform: SyncPlatform.LINE,
       },
       {
@@ -359,7 +359,7 @@ export class LineSyncService {
       },
       {
         id: "mock_line_8",
-        name: "Chen Wei-ming", 
+        name: "Chen Wei-ming",
         email: "weiming.chen@example.com",
         platform: SyncPlatform.LINE,
       },
@@ -382,13 +382,13 @@ export class LineSyncService {
 
       // Simulate QR code parsing
       this.logger.log("📏 Simulating LINE QR code contact sharing...");
-      
+
       // In real implementation, you would:
       // 1. Decode QR code data
       // 2. Validate LINE user ID
       // 3. Fetch public profile if allowed
       // 4. Return contact information
-      
+
       // Mock implementation
       const mockContact: ContactInfo = {
         id: "qr_line_" + Date.now(),

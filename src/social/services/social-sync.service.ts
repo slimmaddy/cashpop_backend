@@ -1,25 +1,24 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
-import {
-  InvalidSyncTokenException,
-  PlatformSyncNotSupportedException,
-  SyncRateLimitException,
-} from "../exceptions/social.exceptions";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
-import { Relationship } from "../entities/relationship.entity";
 import {
+  ContactInfo,
   SyncContactDto,
   SyncContactsResponseDto,
-  SyncResultDto,
-  ContactInfo,
   SyncPlatform,
+  SyncResultDto,
 } from "../dto/syncing.dto";
+import { Relationship } from "../entities/relationship.entity";
+import {
+  InvalidSyncTokenException,
+  PlatformSyncNotSupportedException
+} from "../exceptions/social.exceptions";
+import { RelationshipService } from "./relationship.service";
+import { SuggestionService } from "./suggestion.service";
 import { FacebookSyncService } from "./syncing-facebook.service";
 import { LineSyncService } from "./syncing-line.service";
 import { PhoneSyncService } from "./syncing-phone.service";
-import { RelationshipService } from "./relationship.service";
 import { UserContextService } from "./user-context.service";
-import { SuggestionService } from "./suggestion.service";
 
 /**
  * ✅ OPTIMIZED: Enhanced SocialSyncService with improved performance, error handling, and batch processing
@@ -46,7 +45,7 @@ export class SocialSyncService {
     private readonly relationshipService: RelationshipService,
     private readonly userContextService: UserContextService,
     private readonly suggestionService: SuggestionService
-  ) {}
+  ) { }
 
   /**
    * ✅ OPTIMIZED: Main sync contacts method with enhanced error handling and performance tracking
@@ -63,7 +62,7 @@ export class SocialSyncService {
   ): Promise<SyncContactsResponseDto> {
     const { maxContacts = 5000, batchSize = 100, skipDuplicateCheck = false, createSuggestions = true } = options;
     const startTime = Date.now();
-    
+
     this.logger.log(
       `🚀 Starting optimized sync for ${userEmail} with platform: ${syncDto.platform} (max: ${maxContacts})`
     );
@@ -88,7 +87,7 @@ export class SocialSyncService {
             throw new InvalidSyncTokenException("LINE", "Token is required");
           }
           contacts = await this.lineSyncService.getContacts(
-            syncDto.line.token, 
+            syncDto.line.token,
             { maxContacts }
           );
           break;
@@ -132,7 +131,7 @@ export class SocialSyncService {
       };
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      
+
       this.logger.error(`❌ Sync failed for ${userEmail} after ${executionTime}ms:`, {
         errorMessage: error.message,
         errorType: error.constructor.name,
@@ -176,7 +175,7 @@ export class SocialSyncService {
   ): Promise<SyncResultDto> {
     const { skipDuplicateCheck = false, createSuggestions = true, batchSize = 50 } = options;
     const startTime = Date.now();
-    
+
     this.logger.log(
       `📋 Processing ${contacts.length} contacts for ${userEmail} (batch: ${batchSize})`
     );
@@ -213,11 +212,11 @@ export class SocialSyncService {
       } else {
         // ✅ OPTIMIZE: Process friendships in batches to avoid overwhelming the database
         const userBatches = this.chunkArray(cashpopUsers, batchSize);
-        
+
         for (let i = 0; i < userBatches.length; i++) {
           const batch = userBatches[i];
           this.logger.log(`🔄 Processing friendship batch ${i + 1}/${userBatches.length} (${batch.length} users)`);
-          
+
           // Process batch in parallel with concurrency control
           const batchPromises = batch.map(async (cashpopUser) => {
             try {
@@ -241,11 +240,11 @@ export class SocialSyncService {
                   userEmail,
                   cashpopUser.email
                 );
-                
+
                 if (existing) {
                   return { skipped: true, reason: 'already-exists', existing };
                 }
-                
+
                 friendshipResult = await this.relationshipService.createAutoAcceptedFriendship(
                   userEmail,
                   cashpopUser.email,
@@ -253,8 +252,8 @@ export class SocialSyncService {
                 );
               }
 
-              return { 
-                user: cashpopUser, 
+              return {
+                user: cashpopUser,
                 created: friendshipResult.created,
                 message: friendshipResult.message,
                 relationship: friendshipResult.relationship
@@ -264,17 +263,17 @@ export class SocialSyncService {
                 `❌ Error creating friendship with ${cashpopUser.email}:`,
                 error.message
               );
-              return { 
-                user: cashpopUser, 
+              return {
+                user: cashpopUser,
                 error: error.message,
-                created: false 
+                created: false
               };
             }
           });
 
           // Wait for batch to complete
           const batchResults = await Promise.all(batchPromises);
-          
+
           // Process batch results
           batchResults.forEach((batchResult) => {
             if ('skipped' in batchResult) {
@@ -283,14 +282,14 @@ export class SocialSyncService {
               }
               return;
             }
-            
+
             if ('error' in batchResult) {
               result.errors.push(
                 `Failed to connect with ${batchResult.user.name}: ${batchResult.error}`
               );
               return;
             }
-            
+
             if (batchResult.created) {
               result.newFriendshipsCreated++;
               result.details.newFriends.push({
@@ -309,7 +308,7 @@ export class SocialSyncService {
               platform,
             });
           });
-          
+
           // Small delay between batches to prevent overwhelming the system
           if (i < userBatches.length - 1) {
             await this.delay(50);
@@ -339,7 +338,7 @@ export class SocialSyncService {
       this.logger.log(
         `✅ Sync processing completed in ${processingTime}ms: ${result.newFriendshipsCreated} new friends, ${result.alreadyFriends} already friends, ${result.errors.length} errors`
       );
-      
+
       return result;
     } catch (error) {
       const processingTime = Date.now() - startTime;
@@ -348,7 +347,7 @@ export class SocialSyncService {
       return result;
     }
   }
-  
+
   /**
    * ✅ ADD: Helper method to chunk arrays for batch processing
    */
@@ -359,7 +358,7 @@ export class SocialSyncService {
     }
     return chunks;
   }
-  
+
   /**
    * ✅ ADD: Helper method for delays
    */
@@ -382,7 +381,7 @@ export class SocialSyncService {
   ): Promise<SyncContactsResponseDto> {
     const { contactCount, simulateDelay = false, testConcurrency = false, skipSuggestions = false } = options;
     const startTime = Date.now();
-    
+
     this.logger.log(
       `🧪 Testing sync for ${userEmail} with platform: ${platform} (${contactCount ? `${contactCount} contacts` : 'default count'})`
     );
@@ -412,7 +411,7 @@ export class SocialSyncService {
         if (contactCount > contacts.length) {
           const multiplier = Math.ceil(contactCount / contacts.length);
           const expandedContacts: ContactInfo[] = [];
-          
+
           for (let i = 0; i < multiplier; i++) {
             contacts.forEach((contact, index) => {
               expandedContacts.push({
@@ -440,8 +439,8 @@ export class SocialSyncService {
 
       // Process with test-specific options
       const result = await this.processContacts(
-        userEmail, 
-        contacts, 
+        userEmail,
+        contacts,
         platform,
         {
           createSuggestions: !skipSuggestions,
@@ -465,7 +464,7 @@ export class SocialSyncService {
     } catch (error) {
       const executionTime = Date.now() - startTime;
       this.logger.error(`❌ Test sync failed after ${executionTime}ms:`, error.message);
-      
+
       return {
         success: false,
         message: error.message || "Test sync failed",
@@ -504,7 +503,7 @@ export class SocialSyncService {
     };
   }> {
     const { limit = 50, platform, includeStats = true } = options;
-    
+
     try {
       // Build query
       let query = this.relationshipRepository
@@ -512,7 +511,7 @@ export class SocialSyncService {
         .leftJoin("users", "friend", "friend.email = relationship.friendEmail")
         .select([
           "relationship.id",
-          "relationship.friendEmail", 
+          "relationship.friendEmail",
           "relationship.message",
           "relationship.createdAt",
           "relationship.acceptedAt",
@@ -531,7 +530,7 @@ export class SocialSyncService {
           platformPattern: `%${platform}%`,
         });
       }
-      
+
       if (limit > 0) {
         query = query.limit(limit);
       }
@@ -575,7 +574,7 @@ export class SocialSyncService {
       }
 
       this.logger.log(`📈 Retrieved sync history for ${userEmail}: ${syncedRelationships.length} records`);
-      
+
       return {
         history: syncedRelationships,
         stats

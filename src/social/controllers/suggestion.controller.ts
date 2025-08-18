@@ -1,19 +1,18 @@
-import { Controller, Get, Query, UseGuards, Req } from "@nestjs/common";
+import { Controller, Get, Query, Req, UseGuards } from "@nestjs/common";
 import {
-  ApiTags,
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
+  ApiTags
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
+import {
+  GetSuggestionsDto,
+  SuggestionResponseDto,
+} from "../dto/suggestion.dto";
 import { SuggestionService } from "../services/suggestion.service";
 import { UserContextService } from "../services/user-context.service";
 import { BaseSocialController } from "./base-social.controller";
-import {
-  SuggestionResponseDto,
-  GetSuggestionsDto,
-} from "../dto/suggestion.dto";
 
 @ApiTags("Friends")
 @ApiBearerAuth()

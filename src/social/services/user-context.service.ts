@@ -1,6 +1,6 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, In } from "typeorm";
+import { In, Repository } from "typeorm";
 import { User } from "../../users/entities/user.entity";
 import { UsersService } from "../../users/users.service";
 import { ContactInfo } from "../dto/syncing.dto";
@@ -21,7 +21,7 @@ export class UserContextService {
     private readonly usersService: UsersService,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>
-  ) {}
+  ) { }
 
   /**
    * Lấy user từ JWT payload với caching
@@ -74,7 +74,7 @@ export class UserContextService {
       where: { email: email.trim() },
       select: ["id", "email", "name", "username", "avatar"],
     });
-    
+
     if (user) {
       this.setCachedUser(cacheKey, user);
     }
@@ -124,8 +124,7 @@ export class UserContextService {
     }
 
     this.logger.debug(
-      `👥 Batch loaded ${validEmails.length} users: ${result.size} found, ${
-        validEmails.length - result.size
+      `👥 Batch loaded ${validEmails.length} users: ${result.size} found, ${validEmails.length - result.size
       } not found`
     );
     return result;
@@ -205,16 +204,16 @@ export class UserContextService {
   /**
    * Get cache stats with hit rate
    */
-  getCacheStats(): { 
-    size: number; 
-    hitRate: number; 
-    hits: number; 
+  getCacheStats(): {
+    size: number;
+    hitRate: number;
+    hits: number;
     misses: number;
     expiredEntries: number;
   } {
     const total = this.hitStats.hits + this.hitStats.misses;
     const hitRate = total > 0 ? (this.hitStats.hits / total) * 100 : 0;
-    
+
     // Count expired entries
     const now = Date.now();
     let expiredEntries = 0;

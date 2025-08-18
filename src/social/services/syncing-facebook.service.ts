@@ -1,5 +1,5 @@
-import { Injectable, Logger, BadRequestException } from "@nestjs/common";
 import { HttpService } from "@nestjs/axios";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { firstValueFrom } from "rxjs";
 import { ContactInfo, SyncPlatform } from ".././dto/syncing.dto";
 
@@ -28,7 +28,7 @@ export class FacebookSyncService {
   private readonly logger = new Logger(FacebookSyncService.name);
   private readonly FACEBOOK_API_BASE = "https://graph.facebook.com/v18.0";
 
-  constructor(private readonly httpService: HttpService) {}
+  constructor(private readonly httpService: HttpService) { }
 
   /**
    * Validate Facebook access token
@@ -71,7 +71,7 @@ export class FacebookSyncService {
     skipEmailValidation?: boolean;
   } = {}): Promise<ContactInfo[]> {
     const { batchSize = 100, maxContacts = 5000, skipEmailValidation = false } = options;
-    
+
     try {
       this.logger.log(`📱 Fetching Facebook friends (batch: ${batchSize}, max: ${maxContacts})...`);
 
@@ -80,7 +80,7 @@ export class FacebookSyncService {
         this.validateToken(accessToken),
         this.checkPermissions(accessToken)
       ]);
-      
+
       if (!isValidToken) {
         throw new BadRequestException(
           "Facebook access token không hợp lệ hoặc đã hết hạn"
@@ -123,10 +123,10 @@ export class FacebookSyncService {
               params: nextUrl.includes("?")
                 ? {}
                 : {
-                    access_token: accessToken,
-                    fields: "id,name,email",
-                    limit: batchSize,
-                  },
+                  access_token: accessToken,
+                  fields: "id,name,email",
+                  limit: batchSize,
+                },
               timeout: 15000,
               // ✅ ADD: Retry configuration
               headers: {
@@ -174,12 +174,12 @@ export class FacebookSyncService {
           }
         } catch (pageError) {
           this.logger.warn(`⚠️ Failed to fetch page ${requestCount + 1}, continuing...`, pageError.message);
-          
+
           // Break on critical errors, continue on temporary failures
           if (pageError.response?.status === 401 || pageError.response?.status === 403) {
             throw pageError;
           }
-          
+
           // For other errors, try to continue with next page if available
           nextUrl = undefined;
         }
@@ -347,7 +347,7 @@ export class FacebookSyncService {
       401: "Facebook access token không hợp lệ hoặc đã hết hạn",
       403: 'Không có quyền truy cập danh sách bạn bè Facebook. Vui lòng cấp quyền "user_friends"',
       429: "Facebook API rate limit exceeded. Vui lòng thử lại sau",
-      400: error.response?.data?.error?.message 
+      400: error.response?.data?.error?.message
         ? `Facebook API Error: ${error.response.data.error.message}`
         : "Dữ liệu request không hợp lệ"
     };

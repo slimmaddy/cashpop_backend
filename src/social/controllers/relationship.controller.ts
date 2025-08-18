@@ -1,45 +1,44 @@
 import {
+  Body,
   Controller,
   Get,
-  Post,
-  Body,
   Param,
+  Post,
   Query,
-  UseGuards,
   Req,
+  UseGuards,
 } from "@nestjs/common";
 import {
-  ApiTags,
+  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
-  ApiBearerAuth,
-  ApiQuery,
+  ApiTags
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { RelationshipService } from "../services/relationship.service";
-import { BulkOperationsService } from "../services/bulk-operations.service";
-import { UserContextService } from "../services/user-context.service";
-import { BaseSocialController } from "./base-social.controller";
 import {
-  RelationshipResponseDto,
-  GetFriendsDto,
-  SendFriendRequestDto,
-  SendFriendRequestResponseDto,
-  FriendRequestDto,
-  GetFriendRequestsDto,
-  FriendRequestActionResponseDto,
-} from "../dto/relationship.dto";
-import {
-  BulkSendFriendRequestDto,
   BulkAcceptFriendRequestDto,
-  BulkRejectFriendRequestDto,
   BulkOperationResponseDto,
+  BulkRejectFriendRequestDto,
+  BulkSendFriendRequestDto,
 } from "../dto/bulk-operations.dto";
 import {
   CursorPaginationResponseDto,
-  GetFriendsWithCursorDto,
   GetFriendRequestsWithCursorDto,
+  GetFriendsWithCursorDto,
 } from "../dto/cursor-pagination.dto";
+import {
+  FriendRequestActionResponseDto,
+  FriendRequestDto,
+  GetFriendRequestsDto,
+  GetFriendsDto,
+  RelationshipResponseDto,
+  SendFriendRequestDto,
+  SendFriendRequestResponseDto,
+} from "../dto/relationship.dto";
+import { BulkOperationsService } from "../services/bulk-operations.service";
+import { RelationshipService } from "../services/relationship.service";
+import { UserContextService } from "../services/user-context.service";
+import { BaseSocialController } from "./base-social.controller";
 
 @ApiTags("Friends")
 @Controller("social/friends")

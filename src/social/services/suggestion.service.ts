@@ -1,22 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { User } from "../../users/entities/user.entity";
+import { UsersService } from "../../users/users.service";
 import {
-  Relationship,
-  RelationshipStatus,
+  Relationship
 } from "../entities/relationship.entity";
 import {
   Suggestion,
-  SuggestionStatus,
   SuggestionSource,
+  SuggestionStatus,
 } from "../entities/suggestion.entity";
-import { User } from "../../users/entities/user.entity";
-import { UsersService } from "../../users/users.service";
 import { UserLookupService } from "./user-lookup.service";
 
 import {
-  SuggestionResponseDto,
   GetSuggestionsDto,
+  SuggestionResponseDto,
 } from "../dto/suggestion.dto";
 
 @Injectable()
@@ -28,7 +27,7 @@ export class SuggestionService {
     private suggestionRepository: Repository<Suggestion>,
     private usersService: UsersService,
     private userLookupService: UserLookupService
-  ) {}
+  ) { }
   /**
    * Lấy danh sách gợi ý kết bạn từ bảng suggestions
    */

@@ -1,32 +1,32 @@
 import {
-  Controller,
-  Post,
   Body,
-  Req,
-  UseGuards,
+  Controller,
+  Get,
   HttpCode,
   HttpStatus,
-  Get,
-  Query,
   Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
 } from "@nestjs/common";
 import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
+  ApiOperation,
   ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../auth/guards/jwt-auth.guard";
-import { SocialSyncService } from "../services/social-sync.service";
-import { UserContextService } from "../services/user-context.service";
-import { PhoneSyncService } from "../services/syncing-phone.service";
-import { BaseSocialController } from "./base-social.controller";
 import {
   SyncContactDto,
   SyncContactsResponseDto,
   SyncPlatform,
 } from "../dto/syncing.dto";
+import { SocialSyncService } from "../services/social-sync.service";
+import { PhoneSyncService } from "../services/syncing-phone.service";
+import { UserContextService } from "../services/user-context.service";
+import { BaseSocialController } from "./base-social.controller";
 
 @ApiTags("Social Sync")
 @Controller("social/sync")
@@ -188,11 +188,11 @@ export class SyncController extends BaseSocialController {
   }> {
     try {
       const result = await this.phoneSyncService.testConnection(sessionId);
-      
+
       return {
         success: result.isValid,
-        message: result.isValid 
-          ? `Phone session valid for ${result.phoneNumber}` 
+        message: result.isValid
+          ? `Phone session valid for ${result.phoneNumber}`
           : `Phone session invalid: ${result.error}`,
         sessionValid: result.isValid,
         phoneNumber: result.phoneNumber,
@@ -295,10 +295,10 @@ export class SyncController extends BaseSocialController {
       const processedContacts = await this.phoneSyncService.getContacts(
         testSessionId,
         contactsJson,
-        { 
-          maxContacts: 1000, 
-          validatePhoneNumbers, 
-          skipDuplicates 
+        {
+          maxContacts: 1000,
+          validatePhoneNumbers,
+          skipDuplicates
         }
       );
 
@@ -314,7 +314,7 @@ export class SyncController extends BaseSocialController {
     } catch (error) {
       // Parse error details
       const validationErrors = [error.message];
-      
+
       return {
         success: false,
         message: `Validation failed: ${error.message}`,

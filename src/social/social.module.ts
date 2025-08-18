@@ -1,24 +1,24 @@
+import { HttpModule } from "@nestjs/axios";
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { HttpModule } from "@nestjs/axios";
-import { UsersModule } from "../users/users.module";
 import { ServicesModule } from "../services/services.module";
+import { UsersModule } from "../users/users.module";
 
 // Entities
+import { User } from "../users/entities/user.entity";
 import { Relationship } from "./entities/relationship.entity";
 import { Suggestion } from "./entities/suggestion.entity";
-import { User } from "../users/entities/user.entity";
 
 // Services
+import { BulkOperationsService } from "./services/bulk-operations.service";
 import { RelationshipService } from "./services/relationship.service";
-import { SuggestionService } from "./services/suggestion.service";
 import { SocialSyncService } from "./services/social-sync.service";
+import { SuggestionService } from "./services/suggestion.service";
 import { FacebookSyncService } from "./services/syncing-facebook.service";
 import { LineSyncService } from "./services/syncing-line.service";
 import { PhoneSyncService } from "./services/syncing-phone.service";
 import { UserContextService } from "./services/user-context.service";
 import { UserLookupService } from "./services/user-lookup.service";
-import { BulkOperationsService } from "./services/bulk-operations.service";
 
 // Repositories
 import { RelationshipRepository } from "./repositories/relationship.repository";
@@ -85,4 +85,4 @@ import { SyncController } from "./controllers/sync.controller";
     SocialSyncService, // Export sync service cho other modules
   ],
 })
-export class SocialModule {}
+export class SocialModule { }

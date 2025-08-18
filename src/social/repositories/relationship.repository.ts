@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { DataSource, Repository, SelectQueryBuilder } from "typeorm";
 import { Relationship, RelationshipStatus } from "../entities/relationship.entity";
-import { CursorConfig, CursorPaginationResponseDto } from "../dto/cursor-pagination.dto";
 
 interface FriendQueryResult {
   relationship_id: string;
@@ -233,11 +232,11 @@ export class RelationshipRepository extends Repository<Relationship> {
       .leftJoin("users", "friend", "friend.email = relationship.friendEmail")
       .select([
         "relationship.id as relationship_id",
-        "relationship.userEmail as relationship_useremail", 
+        "relationship.userEmail as relationship_useremail",
         "relationship.friendEmail as relationship_friendemail",
         "relationship.status as relationship_status",
         "relationship.initiatedBy as relationship_initiatedby",
-        "relationship.message as relationship_message", 
+        "relationship.message as relationship_message",
         "relationship.createdAt as relationship_createdat",
         "relationship.acceptedAt as relationship_acceptedat",
         "friend.id as friend_id",
@@ -262,7 +261,7 @@ export class RelationshipRepository extends Repository<Relationship> {
     if (cursor) {
       const operator = sortDir === 'DESC' ? '<' : '>';
       const cursorField = this.getCursorField(sortBy);
-      
+
       if (sortBy === 'name') {
         queryBuilder.andWhere(`friend.name ${operator} :cursor`, { cursor });
       } else {
@@ -313,7 +312,7 @@ export class RelationshipRepository extends Repository<Relationship> {
       .select([
         "relationship.id as relationship_id",
         "relationship.userEmail as relationship_useremail",
-        "relationship.message as relationship_message", 
+        "relationship.message as relationship_message",
         "relationship.createdAt as relationship_createdat",
         "sender.id as friend_id",
         "sender.name as friend_name",
@@ -328,7 +327,7 @@ export class RelationshipRepository extends Repository<Relationship> {
     // Add cursor condition
     if (cursor) {
       const operator = sortDir === 'DESC' ? '<' : '>';
-      
+
       if (sortBy === 'name') {
         queryBuilder.andWhere(`sender.name ${operator} :cursor`, { cursor });
       } else {

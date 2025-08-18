@@ -1,23 +1,22 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import {
+  BulkAcceptFriendRequestDto,
+  BulkOperationResponseDto,
+  BulkOperationResult,
+  BulkRejectFriendRequestDto,
+  BulkSendFriendRequestDto
+} from "../dto/bulk-operations.dto";
 import {
   Relationship,
   RelationshipStatus,
 } from "../entities/relationship.entity";
 import {
   Suggestion,
-  SuggestionStatus,
   SuggestionSource,
+  SuggestionStatus,
 } from "../entities/suggestion.entity";
-import { User } from "../../users/entities/user.entity";
-import {
-  BulkSendFriendRequestDto,
-  BulkAcceptFriendRequestDto,
-  BulkRejectFriendRequestDto,
-  BulkOperationResponseDto,
-  BulkOperationResult
-} from "../dto/bulk-operations.dto";
 import { RelationshipService } from "./relationship.service";
 
 /**
@@ -35,7 +34,7 @@ export class BulkOperationsService {
     private readonly suggestionRepository: Repository<Suggestion>,
     private readonly dataSource: DataSource,
     private readonly relationshipService: RelationshipService
-  ) {}
+  ) { }
 
   /**
    * Bulk create relationships (optimized cho sync)
@@ -321,7 +320,7 @@ export class BulkOperationsService {
             success: true,
             message: "Friend request sent successfully"
           };
-          
+
           successCount++;
           return success;
         } catch (error) {
@@ -331,7 +330,7 @@ export class BulkOperationsService {
             message: "Failed to send friend request",
             error: error.message || "Unknown error"
           };
-          
+
           failureCount++;
           this.logger.warn(`Failed to send friend request to ${friendEmail}: ${error.message}`);
           return failure;
@@ -382,7 +381,7 @@ export class BulkOperationsService {
             success: true,
             message: "Friend request accepted successfully"
           };
-          
+
           successCount++;
           return success;
         } catch (error) {
@@ -392,7 +391,7 @@ export class BulkOperationsService {
             message: "Failed to accept friend request",
             error: error.message || "Unknown error"
           };
-          
+
           failureCount++;
           this.logger.warn(`Failed to accept friend request ${requestId}: ${error.message}`);
           return failure;
@@ -443,7 +442,7 @@ export class BulkOperationsService {
             success: true,
             message: "Friend request rejected successfully"
           };
-          
+
           successCount++;
           return success;
         } catch (error) {
@@ -453,7 +452,7 @@ export class BulkOperationsService {
             message: "Failed to reject friend request",
             error: error.message || "Unknown error"
           };
-          
+
           failureCount++;
           this.logger.warn(`Failed to reject friend request ${requestId}: ${error.message}`);
           return failure;

@@ -1,34 +1,31 @@
 import {
   Injectable,
-  BadRequestException,
-  ConflictException,
-  NotFoundException,
+  NotFoundException
 } from "@nestjs/common";
-import {
-  FriendshipAlreadyExistsException,
-  FriendRequestNotFoundException,
-  SelfFriendshipException,
-  RelationshipActionNotAllowedException,
-} from "../exceptions/social.exceptions";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository, DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
+import { User } from "../../users/entities/user.entity";
+import { UsersService } from "../../users/users.service";
+import {
+  FriendRequestActionResponseDto,
+  FriendRequestDto,
+  GetFriendRequestsDto,
+  GetFriendsDto,
+  RelationshipResponseDto,
+  SendFriendRequestDto,
+  SendFriendRequestResponseDto,
+} from "../dto/relationship.dto";
 import {
   Relationship,
   RelationshipStatus,
 } from "../entities/relationship.entity";
-import { User } from "../../users/entities/user.entity";
-import { UsersService } from "../../users/users.service";
-import { UserContextService } from "./user-context.service";
-import { RelationshipRepository } from "../repositories/relationship.repository";
 import {
-  RelationshipResponseDto,
-  GetFriendsDto,
-  SendFriendRequestDto,
-  SendFriendRequestResponseDto,
-  FriendRequestDto,
-  GetFriendRequestsDto,
-  FriendRequestActionResponseDto,
-} from "../dto/relationship.dto";
+  FriendRequestNotFoundException,
+  FriendshipAlreadyExistsException,
+  SelfFriendshipException
+} from "../exceptions/social.exceptions";
+import { RelationshipRepository } from "../repositories/relationship.repository";
+import { UserContextService } from "./user-context.service";
 
 @Injectable()
 export class RelationshipService {
@@ -41,7 +38,7 @@ export class RelationshipService {
     private userContextService: UserContextService,
     public relationshipRepositoryCustom: RelationshipRepository,
     private dataSource: DataSource
-  ) {}
+  ) { }
 
   /**
    * ✅ OPTIMIZED: Lấy danh sách bạn bè sử dụng custom repository
@@ -391,9 +388,9 @@ export class RelationshipService {
       }
 
       // 2. Update primary relationship
-      await manager.update(Relationship, 
-        { id: requestId }, 
-        { 
+      await manager.update(Relationship,
+        { id: requestId },
+        {
           status: RelationshipStatus.ACCEPTED,
           acceptedAt: new Date()
         }
@@ -401,7 +398,7 @@ export class RelationshipService {
 
       // 3. Update reverse relationship (if exists)
       await manager.update(Relationship,
-        { 
+        {
           userEmail: relationship.userEmail,
           friendEmail: userEmail
         },

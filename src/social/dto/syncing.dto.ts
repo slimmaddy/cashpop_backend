@@ -1,13 +1,10 @@
+import { ApiProperty } from "@nestjs/swagger";
 import {
   IsEnum,
-  IsOptional,
-  IsString,
   IsNotEmpty,
-  IsArray,
-  ValidateIf,
-  ArrayMaxSize,
+  IsString,
+  ValidateIf
 } from "class-validator";
-import { ApiProperty } from "@nestjs/swagger";
 
 export enum SyncPlatform {
   CONTACT = "contact",

@@ -1,14 +1,14 @@
 import { ApiProperty } from "@nestjs/swagger";
+import { Type } from "class-transformer";
 import {
+  IsEmail,
+  IsNumber,
   IsOptional,
   IsString,
-  IsNumber,
-  Min,
   Max,
-  IsEmail,
   MaxLength,
+  Min,
 } from "class-validator";
-import { Type } from "class-transformer";
 import { RelationshipStatus } from "../entities/relationship.entity";
 
 /**

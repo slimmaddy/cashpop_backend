@@ -1,12 +1,12 @@
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
   CreateDateColumn,
-  UpdateDateColumn,
+  Entity,
   Index,
   JoinColumn,
+  ManyToOne,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { User } from "../../users/entities/user.entity";
 
@@ -32,11 +32,11 @@ export class Suggestion {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-    @Column()
-    userEmail: string
+  @Column()
+  userEmail: string
 
-    @Column()
-    suggestedUserEmail: string
+  @Column()
+  suggestedUserEmail: string
 
   @Column({
     type: "enum",
@@ -61,21 +61,21 @@ export class Suggestion {
   @Column({ type: "jsonb", nullable: true })
   metadata: any; // Thông tin thêm (platform data, etc.)
 
-    @Column({ type: 'timestamp', nullable: true })
-    dismissedAt: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  dismissedAt: Date;
 
-    @CreateDateColumn()
-    createdAt: Date
+  @CreateDateColumn()
+  createdAt: Date
 
-    @UpdateDateColumn()
-    updatedAt: Date;
+  @UpdateDateColumn()
+  updatedAt: Date;
 
-    // Relations
-    @ManyToOne(() => User, (user) => user.receivedSuggestions)
-    @JoinColumn({ name: 'userEmail', referencedColumnName: 'email' })
-    user: User;
+  // Relations
+  @ManyToOne(() => User, (user) => user.receivedSuggestions)
+  @JoinColumn({ name: 'userEmail', referencedColumnName: 'email' })
+  user: User;
 
-    @ManyToOne(() => User, (user) => user.givenSuggestions)
-    @JoinColumn({ name: 'suggestedUserEmail', referencedColumnName: 'email' })
-    suggestedUser: User;
+  @ManyToOne(() => User, (user) => user.givenSuggestions)
+  @JoinColumn({ name: 'suggestedUserEmail', referencedColumnName: 'email' })
+  suggestedUser: User;
 }
