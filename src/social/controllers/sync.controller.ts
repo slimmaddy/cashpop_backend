@@ -48,22 +48,22 @@ export class SyncController extends BaseSocialController {
   @Post("contacts")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "⚠️ DEPRECATED: Đồng bộ danh bạ từ các platform (Legacy)",
+    summary: "⚠️ DEPRECATED: Sync contacts from platforms (Legacy)",
     description:
-      "⚠️ DEPRECATED: API này đã được thay thế bằng các endpoint riêng biệt: /sync/contact, /sync/facebook, /sync/line, /sync/phone. Vui lòng sử dụng các endpoint mới để có trải nghiệm tốt hơn.",
+      "⚠️ DEPRECATED: This API has been replaced by separate endpoints: /sync/contact, /sync/facebook, /sync/line, /sync/phone. Please use the new endpoints for a better experience.",
   })
   @ApiResponse({
     status: 200,
-    description: "Đồng bộ thành công (sẽ chuyển hướng đến endpoint tương ứng)",
+    description: "Sync successful (will redirect to corresponding endpoint)",
     type: SyncContactsResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: "Dữ liệu đầu vào không hợp lệ hoặc access token không đúng",
+    description: "Invalid input data or incorrect access token",
   })
   @ApiResponse({
     status: 401,
-    description: "Chưa đăng nhập hoặc token không hợp lệ",
+    description: "Not logged in or invalid token",
   })
   async syncContacts(
     @Req() req: any,
@@ -102,12 +102,12 @@ export class SyncController extends BaseSocialController {
   @Post("contact")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "🚀 Khởi tạo hệ thống đồng bộ danh bạ",
-    description: "📞 Endpoint chính được gọi đầu tiên khi người dùng xem gợi ý bạn bè. Khởi tạo hệ thống đồng bộ và chuẩn bị cho việc đồng bộ từ các platform riêng lẻ (Facebook, LINE, Phone).",
+    summary: "🚀 Initialize contact sync system",
+    description: "📞 Main endpoint called first when users view friend suggestions. Initializes the sync system and prepares for individual platform syncing (Facebook, LINE, Phone).",
   })
   @ApiResponse({
     status: 200,
-    description: "Khởi tạo hệ thống đồng bộ thành công",
+    description: "Contact sync system initialized successfully",
     type: SyncContactsResponseDto,
   })
   async syncContact(
@@ -127,12 +127,12 @@ export class SyncController extends BaseSocialController {
   @Post("facebook")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "📘 Đồng bộ danh bạ Facebook",
-    description: "Đồng bộ danh bạ từ Facebook và tự động kết bạn với CashPop users. Gọi endpoint này sau khi đã gọi /sync/contact để khởi tạo hệ thống.",
+    summary: "📘 Sync Facebook contacts",
+    description: "Sync contacts from Facebook and automatically connect with CashPop users. Call this endpoint after calling /sync/contact to initialize the system.",
   })
   @ApiResponse({
     status: 200,
-    description: "Đồng bộ Facebook thành công",
+    description: "Facebook sync successful",
     type: SyncContactsResponseDto,
   })
   async syncFacebook(
@@ -152,12 +152,12 @@ export class SyncController extends BaseSocialController {
   @Post("line")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "📱 Đồng bộ danh bạ LINE",
-    description: "Đồng bộ danh bạ từ LINE và tự động kết bạn với CashPop users. Gọi endpoint này sau khi đã gọi /sync/contact để khởi tạo hệ thống.",
+    summary: "📱 Sync LINE contacts",
+    description: "Sync contacts from LINE and automatically connect with CashPop users. Call this endpoint after calling /sync/contact to initialize the system.",
   })
   @ApiResponse({
     status: 200,
-    description: "Đồng bộ LINE thành công", 
+    description: "LINE sync successful", 
     type: SyncContactsResponseDto,
   })
   async syncLine(
@@ -177,12 +177,12 @@ export class SyncController extends BaseSocialController {
   @Post("phone")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "📞 Đồng bộ danh bạ điện thoại",
-    description: "Đồng bộ danh bạ từ điện thoại và tự động kết bạn với CashPop users. Gọi endpoint này sau khi đã gọi /sync/contact để khởi tạo hệ thống.",
+    summary: "📞 Sync phone contacts",
+    description: "Sync contacts from phone and automatically connect with CashPop users. Call this endpoint after calling /sync/contact to initialize the system.",
   })
   @ApiResponse({
     status: 200,
-    description: "Đồng bộ phone thành công",
+    description: "Phone sync successful",
     type: SyncContactsResponseDto,
   })
   async syncPhone(
@@ -205,8 +205,8 @@ export class SyncController extends BaseSocialController {
   // ✅ UPDATED: Individual test endpoints for each platform
   @Get("test/contact")
   @ApiOperation({
-    summary: "Test contact sync với mock data",
-    description: "Test chức năng sync contact với dữ liệu giả lập",
+    summary: "Test contact sync with mock data",
+    description: "Test contact sync functionality with mock data",
   })
   async testContactSync(@Req() req: any): Promise<SyncContactsResponseDto> {
     this.logRequest("testContactSync", req);
@@ -230,8 +230,8 @@ export class SyncController extends BaseSocialController {
 
   @Get("test/facebook")
   @ApiOperation({
-    summary: "Test Facebook sync với mock data",
-    description: "Test chức năng sync Facebook với dữ liệu giả lập",
+    summary: "Test Facebook sync with mock data",
+    description: "Test Facebook sync functionality with mock data",
   })
   async testFacebookSync(@Req() req: any): Promise<SyncContactsResponseDto> {
     this.logRequest("testFacebookSync", req);
@@ -246,8 +246,8 @@ export class SyncController extends BaseSocialController {
 
   @Get("test/line")
   @ApiOperation({
-    summary: "Test LINE sync với mock data",
-    description: "Test chức năng sync LINE với dữ liệu giả lập",
+    summary: "Test LINE sync with mock data",
+    description: "Test LINE sync functionality with mock data",
   })
   async testLineSync(@Req() req: any): Promise<SyncContactsResponseDto> {
     this.logRequest("testLineSync", req);
@@ -262,8 +262,8 @@ export class SyncController extends BaseSocialController {
 
   @Get("test/phone")
   @ApiOperation({
-    summary: "Test Phone sync với mock data",
-    description: "Test chức năng sync Phone với dữ liệu giả lập",
+    summary: "Test Phone sync with mock data",
+    description: "Test Phone sync functionality with mock data",
   })
   async testPhoneSync(@Req() req: any): Promise<SyncContactsResponseDto> {
     this.logRequest("testPhoneSync", req);
@@ -279,8 +279,8 @@ export class SyncController extends BaseSocialController {
 
   @Get("history")
   @ApiOperation({
-    summary: "Lịch sử đồng bộ",
-    description: "Xem lịch sử các lần đồng bộ danh bạ",
+    summary: "Sync history",
+    description: "View contact sync history",
   })
   async getSyncHistory(@Req() req: any): Promise<{
     success: boolean;
@@ -319,7 +319,7 @@ export class SyncController extends BaseSocialController {
   @Get("test/phone/session/:sessionId")
   @ApiOperation({
     summary: "Test phone session validation",
-    description: "Test endpoint để validate phone session ID trước khi sync",
+    description: "Test endpoint to validate phone session ID before sync",
   })
   async testPhoneSession(@Param("sessionId") sessionId: string): Promise<{
     success: boolean;
@@ -353,18 +353,18 @@ export class SyncController extends BaseSocialController {
   @Get("test/phone/mock-data")
   @ApiOperation({
     summary: "Get mock phone contacts",
-    description: "Endpoint để lấy mock phone contacts cho testing",
+    description: "Endpoint to get mock phone contacts for testing",
   })
   @ApiQuery({
     name: "type",
     enum: ["standard", "edge-cases", "large"],
-    description: "Type của mock data",
+    description: "Type of mock data",
     required: false,
   })
   @ApiQuery({
     name: "count",
     type: Number,
-    description: "Số lượng contacts (chỉ cho type=large)",
+    description: "Number of contacts (only for type=large)",
     required: false,
   })
   async getMockPhoneContacts(
@@ -414,7 +414,7 @@ export class SyncController extends BaseSocialController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Test phone contacts JSON validation",
-    description: "Test endpoint để validate format của phone contacts JSON",
+    description: "Test endpoint to validate phone contacts JSON format",
   })
   async testPhoneContactsValidation(@Body() body: {
     contactsJson: string;

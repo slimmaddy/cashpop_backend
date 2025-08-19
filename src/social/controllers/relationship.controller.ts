@@ -130,7 +130,7 @@ export class RelationshipController extends BaseSocialController {
     // ✅ OPTIMIZED: Sử dụng BaseSocialController
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return this.relationshipService.sendFriendRequest(
@@ -192,22 +192,22 @@ export class RelationshipController extends BaseSocialController {
 
   @Post("requests/:requestId/accept")
   @ApiOperation({
-    summary: "Chấp nhận lời mời kết bạn",
+    summary: "Accept friend request",
     description:
-      "Chấp nhận lời mời kết bạn cụ thể, cập nhật status thành accepted",
+      "Accept a specific friend request, update status to accepted",
   })
   @ApiResponse({
     status: 200,
-    description: "Chấp nhận lời mời thành công",
+    description: "Friend request accepted successfully",
     type: FriendRequestActionResponseDto,
   })
   @ApiResponse({
     status: 404,
-    description: "Không tìm thấy lời mời kết bạn hoặc lời mời đã được xử lý",
+    description: "Friend request not found or already processed",
   })
   @ApiResponse({
     status: 401,
-    description: "Chưa đăng nhập hoặc token không hợp lệ",
+    description: "Not logged in or invalid token",
   })
   async acceptFriendRequest(
     @Req() req: any,
@@ -218,7 +218,7 @@ export class RelationshipController extends BaseSocialController {
     // ✅ OPTIMIZED: Sử dụng BaseSocialController
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return this.relationshipService.acceptFriendRequest(user.email, requestId);
@@ -226,22 +226,22 @@ export class RelationshipController extends BaseSocialController {
 
   @Post("requests/:requestId/reject")
   @ApiOperation({
-    summary: "Từ chối lời mời kết bạn",
+    summary: "Reject friend request",
     description:
-      "Từ chối lời mời kết bạn cụ thể, cập nhật status thành rejected",
+      "Reject a specific friend request, update status to rejected",
   })
   @ApiResponse({
     status: 200,
-    description: "Từ chối lời mời thành công",
+    description: "Friend request rejected successfully",
     type: FriendRequestActionResponseDto,
   })
   @ApiResponse({
     status: 404,
-    description: "Không tìm thấy lời mời kết bạn hoặc lời mời đã được xử lý",
+    description: "Friend request not found or already processed",
   })
   @ApiResponse({
     status: 401,
-    description: "Chưa đăng nhập hoặc token không hợp lệ",
+    description: "Not logged in or invalid token",
   })
   async rejectFriendRequest(
     @Req() req: any,
@@ -252,7 +252,7 @@ export class RelationshipController extends BaseSocialController {
     // ✅ OPTIMIZED: Sử dụng BaseSocialController
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return this.relationshipService.rejectFriendRequest(user.email, requestId);
@@ -282,7 +282,7 @@ export class RelationshipController extends BaseSocialController {
 
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return this.bulkOperationsService.bulkSendFriendRequests(user.email, bulkSendDto);
@@ -310,7 +310,7 @@ export class RelationshipController extends BaseSocialController {
 
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return this.bulkOperationsService.bulkAcceptFriendRequests(user.email, bulkAcceptDto);
@@ -338,7 +338,7 @@ export class RelationshipController extends BaseSocialController {
 
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
-      throw new Error("Không tìm thấy thông tin người dùng");
+      throw new Error("User information not found");
     }
 
     return this.bulkOperationsService.bulkRejectFriendRequests(user.email, bulkRejectDto);

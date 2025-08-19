@@ -12,7 +12,7 @@ import {
 import { RelationshipStatus } from "../entities/relationship.entity";
 
 /**
- * Response DTO cho danh sách bạn bè - chỉ chứa thông tin cần thiết để hiển thị
+ * Response DTO for friends list - contains only essential information for display
  */
 export class RelationshipResponseDto {
   @ApiProperty({ description: "Relationship ID" })
@@ -21,14 +21,14 @@ export class RelationshipResponseDto {
   @ApiProperty({ description: "Friend user information" })
   friend: {
     id: string;
-    email: string; // ✅ Email là primary identifier
-    username: string; // ✅ Username luôn có (not null)
-    name: string; // ✅ Tên hiển thị
-    avatar?: string; // ✅ Avatar có thể null
+    email: string; // ✅ Email is primary identifier
+    username: string; // ✅ Username always exists (not null)
+    name: string; // ✅ Display name
+    avatar?: string; // ✅ Avatar can be null
   };
 
   @ApiProperty({
-    description: "Relationship status - luôn là accepted cho endpoint này",
+    description: "Relationship status - always accepted for this endpoint",
     enum: RelationshipStatus,
     example: "accepted",
   })
@@ -57,7 +57,7 @@ export class RelationshipResponseDto {
 }
 
 /**
- * Query parameters cho API lấy danh sách bạn bè - đơn giản hóa chỉ cần pagination và search
+ * Query parameters for friends list API - simplified to only need pagination and search
  */
 export class GetFriendsDto {
   @ApiProperty({
@@ -97,29 +97,29 @@ export class GetFriendsDto {
 }
 
 /**
- * DTO để gửi lời mời kết bạn
+ * DTO for sending friend request
  */
 export class SendFriendRequestDto {
   @ApiProperty({
-    description: "Email của người muốn gửi lời mời kết bạn",
+    description: "Email of the person to send friend request to",
     example: "friend@example.com",
   })
-  @IsEmail({}, { message: "Email không hợp lệ" })
+  @IsEmail({}, { message: "Invalid email" })
   friendEmail: string;
 
   @ApiProperty({
-    description: "Tin nhắn kèm theo (tùy chọn)",
+    description: "Optional accompanying message",
     required: false,
-    example: "Xin chào! Tôi muốn kết bạn với bạn.",
+    example: "Hello! I would like to be friends with you.",
   })
   @IsOptional()
   @IsString()
-  @MaxLength(500, { message: "Tin nhắn không được vượt quá 500 ký tự" })
+  @MaxLength(500, { message: "Message cannot exceed 500 characters" })
   message?: string;
 }
 
 /**
- * Response DTO khi gửi lời mời kết bạn
+ * Response DTO when sending friend request
  */
 export class SendFriendRequestResponseDto {
   @ApiProperty({ description: "Success status" })
@@ -133,7 +133,7 @@ export class SendFriendRequestResponseDto {
 }
 
 /**
- * Response DTO cho lời mời kết bạn đã nhận
+ * Response DTO for received friend request
  */
 export class FriendRequestDto {
   @ApiProperty({ description: "Request ID" })
@@ -162,7 +162,7 @@ export class FriendRequestDto {
 }
 
 /**
- * Query parameters cho API lấy lời mời kết bạn
+ * Query parameters for friend requests API
  */
 export class GetFriendRequestsDto {
   @ApiProperty({
@@ -193,7 +193,7 @@ export class GetFriendRequestsDto {
 }
 
 /**
- * Response DTO cho accept/reject friend request
+ * Response DTO for accept/reject friend request
  */
 export class FriendRequestActionResponseDto {
   @ApiProperty({ description: "Success status" })

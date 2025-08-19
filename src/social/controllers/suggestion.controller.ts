@@ -57,7 +57,7 @@ export class SuggestionController extends BaseSocialController {
   ): Promise<{ suggestions: SuggestionResponseDto[]; total: number }> {
     this.logRequest("getSuggestions", req, { query });
 
-    // ✅ OPTIMIZED: Sử dụng BaseSocialController với proper user validation
+    // ✅ OPTIMIZED: Using BaseSocialController with proper user validation
     const { user } = await this.getUserFromRequest(req);
     if (!user) {
       return this.createUserNotFoundResponse({ suggestions: [], total: 0 });

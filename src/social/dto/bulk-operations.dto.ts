@@ -10,16 +10,16 @@ export class BulkSendFriendRequestDto {
     example: ["friend1@example.com", "friend2@example.com"]
   })
   @IsArray()
-  @ArrayMinSize(1, { message: "Phải có ít nhất 1 email" })
-  @ArrayMaxSize(20, { message: "Tối đa 20 email mỗi lần" })
-  @IsEmail({}, { each: true, message: "Tất cả phải là email hợp lệ" })
+  @ArrayMinSize(1, { message: "Must have at least 1 email" })
+  @ArrayMaxSize(20, { message: "Maximum 20 emails per batch" })
+  @IsEmail({}, { each: true, message: "All must be valid emails" })
   friendEmails: string[];
 
   @ApiProperty({
     description: "Optional message for all friend requests",
     required: false,
     maxLength: 200,
-    example: "Hãy kết bạn với tôi nhé!"
+    example: "Let's be friends!"
   })
   @IsOptional()
   @IsString()
@@ -35,8 +35,8 @@ export class BulkAcceptFriendRequestDto {
     example: ["uuid1", "uuid2", "uuid3"]
   })
   @IsArray()
-  @ArrayMinSize(1, { message: "Phải có ít nhất 1 request ID" })
-  @ArrayMaxSize(50, { message: "Tối đa 50 requests mỗi lần" })
+  @ArrayMinSize(1, { message: "Must have at least 1 request ID" })
+  @ArrayMaxSize(50, { message: "Maximum 50 requests per batch" })
   @IsString({ each: true })
   requestIds: string[];
 }
@@ -50,8 +50,8 @@ export class BulkRejectFriendRequestDto {
     example: ["uuid1", "uuid2", "uuid3"]
   })
   @IsArray()
-  @ArrayMinSize(1, { message: "Phải có ít nhất 1 request ID" })
-  @ArrayMaxSize(50, { message: "Tối đa 50 requests mỗi lần" })
+  @ArrayMinSize(1, { message: "Must have at least 1 request ID" })
+  @ArrayMaxSize(50, { message: "Maximum 50 requests per batch" })
   @IsString({ each: true })
   requestIds: string[];
 }
