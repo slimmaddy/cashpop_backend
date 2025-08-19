@@ -11,6 +11,7 @@ import { Suggestion } from "./entities/suggestion.entity";
 
 // Services
 import { BulkOperationsService } from "./services/bulk-operations.service";
+import { MutualFriendsCalculator } from "./services/mutual-friends-calculator.service";
 import { RelationshipService } from "./services/relationship.service";
 import { SocialSyncService } from "./services/social-sync.service";
 import { SuggestionService } from "./services/suggestion.service";
@@ -22,6 +23,9 @@ import { UserLookupService } from "./services/user-lookup.service";
 
 // Repositories
 import { RelationshipRepository } from "./repositories/relationship.repository";
+
+// Strategies
+import { ContactSuggestionStrategy } from "./strategies/contact-suggestion.strategy";
 
 // Controllers
 import { RelationshipController } from "./controllers/relationship.controller";
@@ -68,6 +72,7 @@ import { SyncController } from "./controllers/sync.controller";
     SyncController, // POST /social/sync/contacts, GET /social/sync/test, GET /social/sync/history
   ],
   providers: [
+    // ✅ EXISTING: Core services
     RelationshipService, // Service cho friends list
     SuggestionService, // Service cho friend suggestions
     SocialSyncService, // Service cho sync contacts
@@ -78,11 +83,19 @@ import { SyncController } from "./controllers/sync.controller";
     UserLookupService, // ✅ Service cho user lookup và email validation
     BulkOperationsService, // ✅ Service cho bulk friend operations
     RelationshipRepository, // ✅ CUSTOM: Repository với optimized queries
+
+    // ✅ NEW: Refactored architecture services
+    MutualFriendsCalculator, // ✅ NEW: Service chuyên tính mutual friends
+
+    // ✅ NEW: Strategy pattern implementations
+    ContactSuggestionStrategy, // ✅ NEW: Strategy cho contact-based suggestions
   ],
   exports: [
     RelationshipService, // Export để các module khác có thể sử dụng nếu cần
     SuggestionService, // Export friend suggestion service
     SocialSyncService, // Export sync service cho other modules
+    MutualFriendsCalculator, // Export mutual friends calculator cho reuse
+    UserLookupService, // Export user lookup service cho other modules
   ],
 })
 export class SocialModule { }

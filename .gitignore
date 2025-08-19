@@ -65,4 +65,5 @@ add-phone-verification-fields.sql
 CLAUDE.md
 /src/dummy-data/
 /src/specs/
+/postman
 INTERN_LEARNING_SPECS.md

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { User } from "../../users/entities/user.entity";
@@ -11,6 +11,12 @@ import {
   SuggestionSource,
   SuggestionStatus,
 } from "../entities/suggestion.entity";
+import {
+  InvalidCandidateException,
+  MutualFriendsCalculationException,
+  SuggestionDataException
+} from "../exceptions/suggestion.exceptions";
+import { MutualFriendsCalculator } from "./mutual-friends-calculator.service";
 import { UserLookupService } from "./user-lookup.service";
 
 import {
@@ -20,13 +26,16 @@ import {
 
 @Injectable()
 export class SuggestionService {
+  private readonly logger = new Logger(SuggestionService.name);
+
   constructor(
     @InjectRepository(Relationship)
     private relationshipRepository: Repository<Relationship>,
     @InjectRepository(Suggestion)
     private suggestionRepository: Repository<Suggestion>,
     private usersService: UsersService,
-    private userLookupService: UserLookupService
+    private userLookupService: UserLookupService,
+    private mutualFriendsCalculator: MutualFriendsCalculator
   ) { }
   /**
    * Lấy danh sách gợi ý kết bạn từ bảng suggestions
@@ -125,121 +134,171 @@ export class SuggestionService {
   }
 
   /**
-   * Tạo suggestions từ danh sách contacts (dùng cho sync)
+   * ✅ ENHANCED: Tạo suggestions từ danh sách contacts với proper error handling
    */
   async createSuggestionsFromContacts(
     userEmail: string,
     contacts: any[]
   ): Promise<{ created: number; skipped: number }> {
-    const emails = contacts
-      .filter(
-        (contact) =>
-          contact.email && this.userLookupService.isValidEmail(contact.email)
-      )
-      .map((contact) => contact.email);
+    const startTime = Date.now();
 
-    if (emails.length === 0) {
-      return { created: 0, skipped: 0 };
-    }
-
-    // Tìm CashPop users từ contacts
-    const cashpopUsers = await this.userLookupService.findCashpopUsersByEmails(
-      emails
-    );
-
-    let created = 0;
-    let skipped = 0;
-
-    for (const user of cashpopUsers) {
-      // Skip self
-      if (user.email === userEmail) {
-        skipped++;
-        continue;
+    try {
+      // ✅ Input validation
+      if (!userEmail || typeof userEmail !== 'string') {
+        throw new InvalidCandidateException('Invalid userEmail provided');
       }
 
-      // Kiểm tra đã có relationship chưa
-      const existingRelationship = await this.relationshipRepository.findOne({
-        where: [
-          { userEmail, friendEmail: user.email },
-          { userEmail: user.email, friendEmail: userEmail },
-        ],
-      });
-
-      if (existingRelationship) {
-        skipped++;
-        continue;
+      if (!contacts || !Array.isArray(contacts)) {
+        throw new SuggestionDataException('contacts', contacts, 'array');
       }
 
-      // Kiểm tra đã có suggestion chưa
-      const existingSuggestion = await this.suggestionRepository.findOne({
-        where: {
-          userEmail,
-          suggestedUserEmail: user.email,
-          status: SuggestionStatus.ACTIVE,
-        },
-      });
+      this.logger.log(`Creating suggestions from ${contacts.length} contacts for ${userEmail}`);
 
-      if (existingSuggestion) {
-        skipped++;
-        continue;
+      const emails = contacts
+        .filter(
+          (contact) =>
+            contact.email && this.userLookupService.isValidEmail(contact.email)
+        )
+        .map((contact) => contact.email);
+
+      if (emails.length === 0) {
+        this.logger.debug('No valid emails found in contacts');
+        return { created: 0, skipped: 0 };
       }
 
-      // Tạo suggestion mới
-      try {
-        const mutualFriendsCount = await this.getMutualFriendsCount(
-          userEmail,
-          user.email
-        );
+      this.logger.debug(`Found ${emails.length} valid emails in ${contacts.length} contacts`);
 
-        const suggestion = this.suggestionRepository.create({
-          userEmail,
-          suggestedUserEmail: user.email,
-          source: SuggestionSource.CONTACT,
-          status: SuggestionStatus.ACTIVE,
-          reason: "Found in your contacts",
-          mutualFriendsCount,
-          metadata: {
-            source_info: "contact_sync",
-            contact_name:
-              contacts.find((c) => c.email === user.email)?.name || user.name,
+      // Tìm CashPop users từ contacts
+      const cashpopUsers = await this.userLookupService.findCashpopUsersByEmails(
+        emails
+      );
+
+      this.logger.debug(`Found ${cashpopUsers.length} CashPop users from emails`);
+
+      let created = 0;
+      let skipped = 0;
+
+      for (const user of cashpopUsers) {
+        // Skip self
+        if (user.email === userEmail) {
+          skipped++;
+          continue;
+        }
+
+        // Kiểm tra đã có relationship chưa
+        const existingRelationship = await this.relationshipRepository.findOne({
+          where: [
+            { userEmail, friendEmail: user.email },
+            { userEmail: user.email, friendEmail: userEmail },
+          ],
+        });
+
+        if (existingRelationship) {
+          skipped++;
+          continue;
+        }
+
+        // Kiểm tra đã có suggestion chưa
+        const existingSuggestion = await this.suggestionRepository.findOne({
+          where: {
+            userEmail,
+            suggestedUserEmail: user.email,
+            status: SuggestionStatus.ACTIVE,
           },
         });
 
-        await this.suggestionRepository.save(suggestion);
-        created++;
-      } catch (error) {
-        console.error(`Error creating suggestion for ${user.email}:`, error);
-        skipped++;
-      }
-    }
+        if (existingSuggestion) {
+          skipped++;
+          continue;
+        }
 
-    return { created, skipped };
+        // Tạo suggestion mới
+        try {
+          const mutualFriendsCount = await this.getMutualFriendsCount(
+            userEmail,
+            user.email
+          );
+
+          const suggestion = this.suggestionRepository.create({
+            userEmail,
+            suggestedUserEmail: user.email,
+            source: SuggestionSource.CONTACT,
+            status: SuggestionStatus.ACTIVE,
+            reason: "Found in your contacts",
+            mutualFriendsCount,
+            metadata: {
+              source_info: "contact_sync",
+              contact_name:
+                contacts.find((c) => c.email === user.email)?.name || user.name,
+            },
+          });
+
+          await this.suggestionRepository.save(suggestion);
+          created++;
+        } catch (error) {
+          this.logger.error(`Error creating suggestion for ${user.email}:`, error);
+          skipped++;
+        }
+      }
+
+      const executionTime = Date.now() - startTime;
+      this.logger.log(
+        `Suggestions creation completed in ${executionTime}ms: ${created} created, ${skipped} skipped`
+      );
+
+      return { created, skipped };
+
+    } catch (error) {
+      const executionTime = Date.now() - startTime;
+      this.logger.error(
+        `Critical error in createSuggestionsFromContacts after ${executionTime}ms:`,
+        error
+      );
+
+      // Re-throw custom exceptions, wrap others
+      if (error instanceof InvalidCandidateException ||
+        error instanceof SuggestionDataException ||
+        error instanceof MutualFriendsCalculationException) {
+        throw error;
+      }
+
+      throw new SuggestionDataException(
+        'suggestion_creation',
+        'process_failed',
+        `Failed to process contacts: ${error.message}`
+      );
+    }
   }
 
   /**
+   * ✅ ENHANCED: Sử dụng MutualFriendsCalculator với proper error handling
    * Đếm số bạn chung giữa 2 users
    */
   private async getMutualFriendsCount(
     userEmail: string,
     suggestedUserEmail: string
   ): Promise<number> {
-    const mutualFriendsQuery = `
-      SELECT COUNT(DISTINCT r1."friendEmail") as mutual_count
-      FROM relationships r1
-      INNER JOIN relationships r2 ON r1."friendEmail" = r2."friendEmail"
-      WHERE r1."userEmail" = $1
-        AND r2."userEmail" = $2
-        AND r1.status = 'accepted'
-        AND r2.status = 'accepted'
-        AND r1."friendEmail" != $1
-        AND r1."friendEmail" != $2
-    `;
+    try {
+      if (!userEmail || !suggestedUserEmail) {
+        throw new InvalidCandidateException('Missing required emails for mutual friends calculation');
+      }
 
-    const result = await this.relationshipRepository.query(mutualFriendsQuery, [
-      userEmail,
-      suggestedUserEmail,
-    ]);
-    return parseInt(result[0]?.mutual_count || "0");
+      return await this.mutualFriendsCalculator.getMutualFriendsCount(
+        userEmail,
+        suggestedUserEmail
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to get mutual friends count for ${userEmail} <-> ${suggestedUserEmail}:`,
+        error
+      );
+
+      if (error instanceof InvalidCandidateException) {
+        throw error;
+      }
+
+      throw new MutualFriendsCalculationException(userEmail, suggestedUserEmail, error);
+    }
   }
 
   /**
@@ -366,53 +425,37 @@ export class SuggestionService {
   }
 
   /**
-   * Tính số lượng mutual friends
+   * ✅ REFACTORED: Sử dụng MutualFriendsCalculator thay vì raw SQL
+   * Tính số lượng mutual friends với full result
    */
   private async calculateMutualFriendsCount(
     userEmail: string,
     suggestedUserEmail: string
   ): Promise<number> {
-    const query = `
-      SELECT COUNT(DISTINCT mutual_friend.friend_email) as count
-      FROM relationships user_rel
-      JOIN relationships suggested_rel ON user_rel.friend_email = suggested_rel.friend_email
-      WHERE user_rel.user_email = $1 
-        AND suggested_rel.user_email = $2
-        AND user_rel.status = 'accepted'
-        AND suggested_rel.status = 'accepted'
-    `;
-
-    const result = await this.relationshipRepository.query(query, [
+    const result = await this.mutualFriendsCalculator.calculateMutualFriends(
       userEmail,
-      suggestedUserEmail,
-    ]);
-    return parseInt(result[0]?.count || "0");
+      suggestedUserEmail
+    );
+    return result.count;
   }
 
   /**
-   * Lấy thông tin mutual friends cho metadata
+   * ✅ REFACTORED: Sử dụng MutualFriendsCalculator thay vì raw SQL
+   * Lấy thông tin mutual friends cho metadata (top 3 friends)
    */
   private async getMutualFriendsMetadata(
     userEmail: string,
     suggestedUserEmail: string
   ): Promise<any> {
-    const query = `
-      SELECT u.name
-      FROM relationships user_rel
-      JOIN relationships suggested_rel ON user_rel."friendEmail" = suggested_rel."friendEmail"
-      JOIN users u ON user_rel."friendEmail" = u.email
-      WHERE user_rel."userEmail" = $1
-        AND suggested_rel."userEmail" = $2
-        AND user_rel.status = 'accepted'
-        AND suggested_rel.status = 'accepted'
-      ORDER BY u.name
-      LIMIT 3
-    `;
-
-    const mutualFriends = await this.relationshipRepository.query(query, [userEmail, suggestedUserEmail]);
+    const { names, totalCount } = await this.mutualFriendsCalculator.getTopMutualFriends(
+      userEmail,
+      suggestedUserEmail,
+      3
+    );
 
     return {
-      mutual_friends: mutualFriends.map((f: any) => f.name),
+      mutual_friends: names,
+      total_mutual_friends: totalCount,
       source_info: "email_search",
     };
   }
