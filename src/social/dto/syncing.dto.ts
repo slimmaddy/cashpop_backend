@@ -88,6 +88,58 @@ export class SyncContactDto {
   phone?: PhoneSyncDataDto;
 }
 
+// ✅ NEW: Individual sync DTOs for each platform
+export class ContactSyncDto {
+  @ApiProperty({
+    description: "Contact sync configuration options",
+    example: { includePhoneContacts: true, includeFacebookContacts: true },
+    required: false,
+  })
+  options?: {
+    includePhoneContacts?: boolean;
+    includeFacebookContacts?: boolean;
+    includeLineContacts?: boolean;
+  };
+}
+
+export class FacebookSyncRequestDto {
+  @ApiProperty({
+    description: "Facebook access token from client",
+    example: "EAABwzLixnjYBAO7ZC4...",
+  })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class LineSyncRequestDto {
+  @ApiProperty({
+    description: "LINE access token from client", 
+    example: "U1234567890abcdef1234567890abcdef",
+  })
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+}
+
+export class PhoneSyncRequestDto {
+  @ApiProperty({
+    description: "Phone verification session ID from previous OTP verification",
+    example: "uuid-session-id",
+  })
+  @IsString()
+  @IsNotEmpty()
+  sessionId: string;
+
+  @ApiProperty({
+    description: "Contact list from phone as JSON array",
+    example: "[{\"name\":\"John Doe\",\"phone\":\"+821012345678\"},{\"name\":\"Jane Smith\",\"phone\":\"+821087654321\"}]",
+  })
+  @IsString()
+  @IsNotEmpty()
+  contactsJson: string;
+}
+
 export interface ContactInfo {
   id: string;
   name: string;
