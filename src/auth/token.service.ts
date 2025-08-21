@@ -16,9 +16,9 @@ export class TokenService {
    * @param userId User ID
    * @returns Object containing access and refresh tokens
    */
-  async generateAuthTokens(userId: string) {
+  async generateAuthTokens(userId: string, email?: string, role?: string) {
     // Generate access token using JWT
-    const accessToken = await this.generateAccessToken(userId);
+    const accessToken = await this.generateAccessToken(userId,email,role);
 
     // Generate a random refresh token
     const refreshToken = this.generateRefreshToken();
@@ -34,9 +34,11 @@ export class TokenService {
    * @param userId User ID
    * @returns JWT access token
    */
-  async generateAccessToken(userId: string): Promise<string> {
-    return this.jwtService.signAsync(
-      { sub: userId },
+  async generateAccessToken(userId: string, email?:string, role?:string): Promise<string> {
+    const payload: any = {sub:userId};
+    if(email) payload.email = email;
+    if(role) payload.role = role;
+    return this.jwtService.signAsync(payload,
       {
         secret: this.configService.get("JWT_SECRET"),
         expiresIn: this.configService.get("JWT_EXPIRATION", "15m"),

@@ -21,6 +21,10 @@ export enum AuthProvider {
   APPLE = "apple",
   GOOGLE = "google",
 }
+export enum UserRole{
+  USER = "user",
+  ADMIN = "admin",
+}
 
 @Entity("users")
 export class User {
@@ -55,6 +59,18 @@ export class User {
     default: AuthProvider.LOCAL,
   })
   provider: AuthProvider;
+
+  @Column({
+    type:"enum",
+    enum: UserRole,
+    default:UserRole.USER,
+  })
+  @ApiProperty({
+    description:"The role of user",
+    enum:UserRole,
+    default:UserRole.USER
+  })
+  role: UserRole;
 
   @Column({ nullable: true })
   @ApiProperty({

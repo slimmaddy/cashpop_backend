@@ -12,7 +12,7 @@ import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
 import { UsersService } from "../users/users.service";
 import { CreateUserDto } from "../users/dto/create-user.dto";
-import { AuthProvider } from "../users/entities/user.entity";
+import { AuthProvider, UserRole } from "../users/entities/user.entity";
 import { ValkeyService, OtpType } from "../services/valkey.service";
 import { MailerService } from "../services/mailer.service";
 import { SmsService } from "../services/sms.service";
@@ -93,7 +93,7 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const tokens = await this.tokenService.generateAuthTokens(user.id);
+    const tokens = await this.tokenService.generateAuthTokens(user.id, user.email, user.role);
     // Store the hashed refresh token in the database
     await this.usersService.setRefreshToken(user.id, tokens.refreshToken);
 
@@ -103,6 +103,7 @@ export class AuthService {
         username: user.username,
         email: user.email,
         name: user.name,
+        role: user.role
       },
       ...tokens,
     };
@@ -136,7 +137,7 @@ export class AuthService {
       });
 
       // Generate tokens
-      const accessToken = await this.tokenService.generateAccessToken(user.id);
+      const accessToken = await this.tokenService.generateAccessToken(user.id,user.email,user.role);
 
       return {
         user: {
@@ -144,6 +145,7 @@ export class AuthService {
           username: user.username,
           email: user.email,
           name: user.name,
+          role: user.role,
         },
         refreshToken,
         accessToken,
@@ -161,8 +163,10 @@ export class AuthService {
   }
 
   async refreshTokens(user: any) {
+    // Fetch full user info to get role
+    const fullUser = await this.usersService.findById(user.userId);
     // Generate new tokens
-    const accessToken = await this.tokenService.generateAccessToken(user.id);
+    const accessToken = await this.tokenService.generateAccessToken(user.id, user.email, user.role);
     return { accessToken };
   }
 
@@ -190,7 +194,7 @@ export class AuthService {
       );
     }
 
-    const tokens = await this.tokenService.generateAuthTokens(user.id);
+    const tokens = await this.tokenService.generateAuthTokens(user.id, user.email, user.role);
 
     // Store the hashed refresh token in the databasededdreer
     await this.usersService.setRefreshToken(user.id, tokens.refreshToken);
@@ -202,6 +206,7 @@ export class AuthService {
         username: user.username,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     };
   }
@@ -268,7 +273,7 @@ export class AuthService {
       user = await this.usersService.createLineUser(email, providerId, name);
     }
 
-    const tokens = await this.tokenService.generateAuthTokens(user.id);
+    const tokens = await this.tokenService.generateAuthTokens(user.id,user.email, user.role);
 
     // Store the hashed refresh token in the database
     await this.usersService.setRefreshToken(user.id, tokens.refreshToken);
@@ -281,6 +286,7 @@ export class AuthService {
         name: user.name,
         email: user.email,
         provider: user.provider,
+        role: user.role,
       },
     };
   }

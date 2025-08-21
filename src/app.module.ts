@@ -9,6 +9,7 @@ import { ServicesModule } from "./services/services.module";
 import { FileUploadModule } from "./file-upload/file-upload.module";
 import { HealthModule } from "./health/health.module";
 import { SocialModule } from "./social/social.module";
+import { AdminModule } from "./admin/admin.module";
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { SocialModule } from "./social/social.module";
     FileUploadModule,
     HealthModule,
     SocialModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],
