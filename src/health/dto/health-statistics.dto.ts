@@ -2,9 +2,9 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsEnum, IsOptional, IsDateString } from "class-validator";
 
 export enum StatisticsPeriod {
-  DAY = 'day',
-  WEEK = 'week',
-  MONTH = 'month'
+  DAY = "day",
+  WEEK = "week",
+  MONTH = "month",
 }
 
 export class HealthStatisticsQueryDto {

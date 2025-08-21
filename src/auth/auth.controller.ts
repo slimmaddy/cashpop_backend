@@ -28,22 +28,48 @@ import { UserProfileDto } from "./dto/user-profile.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { RegisterDto } from "./dto/register.dto";
-import { VerifyEmailInitiateDto, VerifyEmailInitiateResponseDto } from "./dto/verify-email-initiate.dto";
-import { VerifyEmailOtpDto, VerifyEmailOtpResponseDto } from "./dto/verify-email-otp.dto";
-import { ResetPasswordInitiateDto, ResetPasswordInitiateResponseDto } from "./dto/reset-password-initiate.dto";
-import { ResetPasswordVerifyOtpDto, ResetPasswordVerifyOtpResponseDto } from "./dto/reset-password-verify-otp.dto";
-import { ResetPasswordSubmitDto, ResetPasswordSubmitResponseDto } from "./dto/reset-password-submit.dto";
-import { FindUsernameInitiateDto, FindUsernameInitiateResponseDto } from "./dto/find-username-initiate.dto";
-import { FindUsernameVerifyOtpDto, FindUsernameVerifyOtpResponseDto } from "./dto/find-username-verify-otp.dto";
-import {LogoutResponseDto} from "./dto/logout.dto";
-import {TokensResponseDto} from "./dto/tokens-response.dto";
+import {
+  VerifyEmailInitiateDto,
+  VerifyEmailInitiateResponseDto,
+} from "./dto/verify-email-initiate.dto";
+import {
+  VerifyEmailOtpDto,
+  VerifyEmailOtpResponseDto,
+} from "./dto/verify-email-otp.dto";
+import {
+  ResetPasswordInitiateDto,
+  ResetPasswordInitiateResponseDto,
+} from "./dto/reset-password-initiate.dto";
+import {
+  ResetPasswordVerifyOtpDto,
+  ResetPasswordVerifyOtpResponseDto,
+} from "./dto/reset-password-verify-otp.dto";
+import {
+  ResetPasswordSubmitDto,
+  ResetPasswordSubmitResponseDto,
+} from "./dto/reset-password-submit.dto";
+import {
+  FindUsernameInitiateDto,
+  FindUsernameInitiateResponseDto,
+} from "./dto/find-username-initiate.dto";
+import {
+  FindUsernameVerifyOtpDto,
+  FindUsernameVerifyOtpResponseDto,
+} from "./dto/find-username-verify-otp.dto";
+import { LogoutResponseDto } from "./dto/logout.dto";
+import { TokensResponseDto } from "./dto/tokens-response.dto";
 import { LineAuthGuard } from "./guards/line-auth.guard";
+import {
+  InitiatePhoneVerificationDto,
+  VerifyPhoneOtpDto,
+  PhoneVerificationResponseDto,
+  PhoneVerificationStatusDto,
+} from "./dto/phone-verification.dto";
 
 @ApiTags("Authentication")
 @Controller("auth")
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
 
   @Post("verify-email-initiate")
   @HttpCode(HttpStatus.OK)
@@ -51,11 +77,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Verification email sent",
-    type: VerifyEmailInitiateResponseDto
+    type: VerifyEmailInitiateResponseDto,
   })
   @ApiResponse({ status: 409, description: "Email already exists" })
-  async verifyEmailInitiate(@Body() verifyEmailInitiateDto: VerifyEmailInitiateDto) {
-    return this.authService.initiateEmailVerification(verifyEmailInitiateDto.email);
+  async verifyEmailInitiate(
+    @Body() verifyEmailInitiateDto: VerifyEmailInitiateDto
+  ) {
+    return this.authService.initiateEmailVerification(
+      verifyEmailInitiateDto.email
+    );
   }
 
   @Post("verify-email-otp")
@@ -64,24 +94,30 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Email verified successfully",
-    type: VerifyEmailOtpResponseDto
+    type: VerifyEmailOtpResponseDto,
   })
   @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
   async verifyEmailOtp(@Body() verifyEmailOtpDto: VerifyEmailOtpDto) {
-    return this.authService.verifyEmailOtp(verifyEmailOtpDto.email, verifyEmailOtpDto.otp);
+    return this.authService.verifyEmailOtp(
+      verifyEmailOtpDto.email,
+      verifyEmailOtpDto.otp
+    );
   }
 
   @UseGuards(EmailVerificationGuard)
   @Post("register")
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: "Register a new user with verified email token" })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: "User successfully registered",
-    type: AuthResponseDto
+    type: AuthResponseDto,
   })
   @ApiResponse({ status: 409, description: "Email already exists" })
-  @ApiResponse({ status: 401, description: "Invalid or expired verification token" })
+  @ApiResponse({
+    status: 401,
+    description: "Invalid or expired verification token",
+  })
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto);
   }
@@ -90,10 +126,10 @@ export class AuthController {
   @Post("login")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login with email and password" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Login successful",
-    type: AuthResponseDto
+    type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async login(@Body() loginDto: LoginDto, @Req() req) {
@@ -105,10 +141,10 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Logout" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Logout successful",
-    type: LogoutResponseDto
+    type: LogoutResponseDto,
   })
   async logout(@Req() req) {
     return this.authService.logout(req.user);
@@ -118,10 +154,10 @@ export class AuthController {
   @Post("refresh")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Refresh access token" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Token refreshed successfully",
-    type: TokensResponseDto
+    type: TokensResponseDto,
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto, @Req() req) {
@@ -132,10 +168,10 @@ export class AuthController {
   @Post("facebook")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Login with Facebook token" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Login successful",
-    type: AuthResponseDto
+    type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({
@@ -146,7 +182,7 @@ export class AuthController {
     const { email, facebookId, name } = req.user;
     return this.authService.facebookLogin(email, facebookId, name);
   }
-  
+
   @UseGuards(LineAuthGuard)
   @Post("line")
   @HttpCode(HttpStatus.OK)
@@ -154,27 +190,26 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Login successful",
-    type: AuthResponseDto
+    type: AuthResponseDto,
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({
     status: 409,
     description: "Email already registered with a different method",
   })
-  async lineLogin(@Body() lineAuthDto: LineAuthDto, @Req() req){
+  async lineLogin(@Body() lineAuthDto: LineAuthDto, @Req() req) {
     const { email, lineId, name } = req.user;
     return this.authService.lineLogin(email, lineId, name);
   }
-  
 
   @UseGuards(JwtAuthGuard)
   @Get("profile")
   @ApiBearerAuth()
   @ApiOperation({ summary: "Get user profile" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Return the user profile",
-    type: UserProfileDto
+    type: UserProfileDto,
   })
   getProfile(@Req() req): UserProfileDto {
     return req.user;
@@ -186,12 +221,19 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Password reset email sent",
-    type: ResetPasswordInitiateResponseDto
+    type: ResetPasswordInitiateResponseDto,
   })
   @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "OTP already sent or Facebook user" })
-  async resetPasswordInitiate(@Body() resetPasswordInitiateDto: ResetPasswordInitiateDto) {
-    return this.authService.initiatePasswordReset(resetPasswordInitiateDto.email);
+  @ApiResponse({
+    status: 400,
+    description: "OTP already sent or Facebook user",
+  })
+  async resetPasswordInitiate(
+    @Body() resetPasswordInitiateDto: ResetPasswordInitiateDto
+  ) {
+    return this.authService.initiatePasswordReset(
+      resetPasswordInitiateDto.email
+    );
   }
 
   @Post("reset-password-verify-otp")
@@ -200,13 +242,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "OTP verified successfully",
-    type: ResetPasswordVerifyOtpResponseDto
+    type: ResetPasswordVerifyOtpResponseDto,
   })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
-  async resetPasswordVerifyOtp(@Body() resetPasswordVerifyOtpDto: ResetPasswordVerifyOtpDto) {
+  async resetPasswordVerifyOtp(
+    @Body() resetPasswordVerifyOtpDto: ResetPasswordVerifyOtpDto
+  ) {
     return this.authService.verifyPasswordResetOtp(
-      resetPasswordVerifyOtpDto.email, 
+      resetPasswordVerifyOtpDto.email,
       resetPasswordVerifyOtpDto.otp
     );
   }
@@ -215,17 +259,25 @@ export class AuthController {
   @Post("reset-password-submit")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: "Reset password with verified email token" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Password reset successful",
-    type: ResetPasswordSubmitResponseDto
+    type: ResetPasswordSubmitResponseDto,
   })
   @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 400, description: "Facebook user cannot reset password" })
-  @ApiResponse({ status: 401, description: "Invalid or expired verification token" })
-  async resetPasswordSubmit(@Body() resetPasswordSubmitDto: ResetPasswordSubmitDto) {
+  @ApiResponse({
+    status: 400,
+    description: "Facebook user cannot reset password",
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Invalid or expired verification token",
+  })
+  async resetPasswordSubmit(
+    @Body() resetPasswordSubmitDto: ResetPasswordSubmitDto
+  ) {
     return this.authService.resetPassword(
-      resetPasswordSubmitDto.email, 
+      resetPasswordSubmitDto.email,
       resetPasswordSubmitDto.password
     );
   }
@@ -236,11 +288,13 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Find username email sent",
-    type: FindUsernameInitiateResponseDto
+    type: FindUsernameInitiateResponseDto,
   })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 400, description: "OTP already sent" })
-  async findUsernameInitiate(@Body() findUsernameInitiateDto: FindUsernameInitiateDto) {
+  async findUsernameInitiate(
+    @Body() findUsernameInitiateDto: FindUsernameInitiateDto
+  ) {
     return this.authService.initiateFindUsername(findUsernameInitiateDto.email);
   }
 
@@ -250,13 +304,15 @@ export class AuthController {
   @ApiResponse({
     status: 200,
     description: "Username found successfully",
-    type: FindUsernameVerifyOtpResponseDto
+    type: FindUsernameVerifyOtpResponseDto,
   })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 400, description: "Invalid or expired OTP" })
-  async findUsernameVerifyOtp(@Body() findUsernameVerifyOtpDto: FindUsernameVerifyOtpDto) {
+  async findUsernameVerifyOtp(
+    @Body() findUsernameVerifyOtpDto: FindUsernameVerifyOtpDto
+  ) {
     return this.authService.verifyFindUsernameOtp(
-      findUsernameVerifyOtpDto.email, 
+      findUsernameVerifyOtpDto.email,
       findUsernameVerifyOtpDto.otp
     );
   }
@@ -266,27 +322,117 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth()
   @ApiOperation({ summary: "Remove user account" })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: "Account removed successfully",
     schema: {
       type: "object",
       properties: {
         success: {
           type: "boolean",
-          example: true
+          example: true,
         },
         message: {
           type: "string",
-          example: "Account removed successfully"
-        }
-      }
-    }
+          example: "Account removed successfully",
+        },
+      },
+    },
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 500, description: "Internal server error" })
   async removeAccount(@Req() req) {
     return this.authService.removeAccount(req.user.userId);
+  }
+
+  // ==================== PHONE VERIFICATION ENDPOINTS ====================
+
+  @Get("phone-verification/status")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get current phone verification status',
+    description: 'Retrieve the current phone verification status for the authenticated user.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone verification status retrieved successfully',
+    type: PhoneVerificationStatusDto
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'User not found'
+  })
+  async getPhoneVerificationStatus(@Req() req): Promise<PhoneVerificationStatusDto> {
+    return this.authService.getPhoneVerificationStatus(req.user.userId);
+  }
+
+  @Post("phone-verification/initiate")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Initiate phone identity verification for logged-in user',
+    description: 'Start the phone verification process by providing personal information and phone number. An OTP will be sent via SMS.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP sent successfully',
+    type: PhoneVerificationResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error or invalid data'
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict - phone number or residence number already in use'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  async initiatePhoneVerification(
+    @Req() req,
+    @Body() dto: InitiatePhoneVerificationDto,
+  ): Promise<PhoneVerificationResponseDto> {
+    return this.authService.initiatePhoneVerification(req.user.userId, dto);
+  }
+
+  @Post("phone-verification/verify-otp")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Verify OTP and complete phone verification',
+    description: 'Complete the phone verification process by providing the OTP received via SMS.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phone verification completed successfully',
+    type: PhoneVerificationResponseDto
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid OTP or verification error'
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Verification session not found'
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing JWT token'
+  })
+  async verifyPhoneOtp(
+    @Req() req,
+    @Body() dto: VerifyPhoneOtpDto,
+  ): Promise<PhoneVerificationResponseDto> {
+    return this.authService.verifyPhoneOtp(req.user.userId, dto);
   }
 }

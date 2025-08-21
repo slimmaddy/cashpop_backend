@@ -14,7 +14,9 @@ import { User } from "../../users/entities/user.entity";
 @Entity("health_data")
 export class HealthData {
   @PrimaryGeneratedColumn("uuid")
-  @ApiProperty({ description: "The unique identifier of the health data record" })
+  @ApiProperty({
+    description: "The unique identifier of the health data record",
+  })
   id: string;
 
   @ManyToOne(() => User, { onDelete: "CASCADE" })
@@ -24,12 +26,16 @@ export class HealthData {
 
   @Column({ name: "user_id" })
   @Index()
-  @ApiProperty({ description: "The ID of the user associated with this health data" })
+  @ApiProperty({
+    description: "The ID of the user associated with this health data",
+  })
   userId: string;
 
   @Column({ type: "date" })
   @Index()
-  @ApiProperty({ description: "The date of the health data record (YYYY-MM-DD)" })
+  @ApiProperty({
+    description: "The date of the health data record (YYYY-MM-DD)",
+  })
   date: string;
 
   @Column({ type: "int", default: 0 })
@@ -49,7 +55,10 @@ export class HealthData {
   distance: number;
 
   @Column({ type: "varchar", length: 50 })
-  @ApiProperty({ description: "Source of the health data (e.g., 'ios_health', 'android_health')" })
+  @ApiProperty({
+    description:
+      "Source of the health data (e.g., 'ios_health', 'android_health')",
+  })
   source: string;
 
   @CreateDateColumn()

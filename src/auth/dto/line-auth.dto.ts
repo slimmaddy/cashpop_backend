@@ -9,5 +9,12 @@ export class LineAuthDto {
     @IsString()
     @IsNotEmpty({ message: "Line access token is required" })
     token: string;
-}
 
+    @ApiProperty({
+        description: "The Line ID token (JWT) obtained from the mobile client",
+        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    })
+    @IsString()
+    @IsNotEmpty({ message: "Line ID token is required" })
+    id_token: string;
+}
